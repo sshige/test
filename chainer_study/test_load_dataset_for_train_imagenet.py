@@ -58,12 +58,13 @@ class PreprocessedDataset(chainer.dataset.DatasetMixin):
         right = left + crop_size
 
         image = image[:, top:bottom, left:right]
+        image -= self.mean
         # image -= self.mean[:, top:bottom, left:right]
         image /= 255
         return image, label
 
 
-def generate_dataset_list_file(root = '/home/leus/dataset/ILSVRC2012_img_train_t3/images/',
+def generate_dataset_list_file(root = os.path.join(os.getenv('HOME'), 'dataset/ILSVRC2012_img_train_t3/images/'),
                                output_filename = 'dataset_list.txt', sort = False):
     category_id_list = []
     output_file = open(os.path.join(root, output_filename), 'w')
@@ -88,41 +89,46 @@ def main():
 
     parser = argparse.ArgumentParser(
         description='Learning convnet from ILSVRC2012 dataset')
-    parser.add_argument('train', help='Path to training image-label list file')
-    parser.add_argument('val', help='Path to validation image-label list file')
+    parser.add_argument('--train', type=str, default=os.path.join(
+        os.getenv('HOME'), 'dataset/ILSVRC2012_img_train_t3/images/dataset_list.txt'),
+                        help='Path to training image-label list file')
     parser.add_argument('--batchsize', '-B', type=int, default=32,
                         help='Learning minibatch size')
     parser.add_argument('--loaderjob', '-j', type=int,
                         help='Number of parallel data loading processes')
     parser.add_argument('--mean', '-m', default=os.path.join(
-        os.getenv('HOME'),'src/chainer/examples/imagenet/mean.npy'),
+        os.getenv('HOME'), 'src/chainer/examples/imagenet/mean_for_alex.npy'),
                         help='Mean file (computed by compute_mean.py)')
     parser.add_argument('--root', '-R', default='.',
                         help='Root directory path of image files')
-    parser.add_argument('--val_batchsize', '-b', type=int, default=250,
-                        help='Validation minibatch size')
     args = parser.parse_args()
 
-    generate_dataset_list_file()
+    show = True
+    generate_list = False
+
+    if generate_list:
+        generate_dataset_list_file()
 
     # Load the datasets and mean file
     mean = np.load(args.mean)
-    train = PreprocessedDataset(args.train, args.root, mean, 227, False)
-    val = PreprocessedDataset(args.val, args.root, mean, 227, False)
+    train = PreprocessedDataset(args.train, args.root, mean, 227)
     # These iterators load the images with subprocesses running in parallel to
     # the training/validation.
     train_iter = chainer.iterators.MultiprocessIterator(
         train, args.batchsize, n_processes=args.loaderjob)
-    val_iter = chainer.iterators.MultiprocessIterator(
-        val, args.val_batchsize, repeat=False, n_processes=args.loaderjob)
+    mean_img = np.zeros_like(train[0][0])
     for train_i in train:
-        cv2.imshow('test', cv2.cvtColor(train_i[0].transpose(1,2,0), cv2.COLOR_RGB2BGR))
+        mean_img += train_i[0]
         print('category: {}'.format(train_i[1]))
-        input = cv2.waitKey(0)
-        if input == ord('q'):
-            break
-    cv2.destroyAllWindows()
+        if show:
+            cv2.imshow('test', cv2.cvtColor(train_i[0].transpose(1,2,0), cv2.COLOR_RGB2BGR))
+            input = cv2.waitKey(0)
+            if input == ord('q'):
+                break
+    mean_img = (mean_img * 255) / len(train)
+    np.save('mean.npy', mean_img)
+    if show:
+        cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    generate_dataset_list_file()
     main()
