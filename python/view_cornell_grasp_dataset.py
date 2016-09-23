@@ -17,15 +17,16 @@ def draw_rectangle(rect_filepath, img, color1, color2):
     poslist = list(f)
     for i in range(len(poslist) / 4):
         rect_vertices = [[float(poslist[i*4 + k].split(' ')[j]) for j in range(2)] for k in range(4)]
-        if not any([math.isnan(item) for sublist in rect_vertices for item in sublist]):
-            for j in range(4):
-                rect_v1 = tuple(int(rect_vertices[j % 4][k]) for k in range(2))
-                rect_v2 = tuple(int(rect_vertices[(j+1) % 4][k]) for k in range(2))
-                if j%2 == 0:
-                    rect_color = color1
-                else:
-                    rect_color = color2
-                cv2.line(img, rect_v1, rect_v2, rect_color, 2)
+        if any([math.isnan(item) for sublist in rect_vertices for item in sublist]):
+            continue
+        for j in range(4):
+            rect_v1 = tuple(int(rect_vertices[j % 4][k]) for k in range(2))
+            rect_v2 = tuple(int(rect_vertices[(j+1) % 4][k]) for k in range(2))
+            if j%2 == 0:
+                rect_color = color1
+            else:
+                rect_color = color2
+            cv2.line(img, rect_v1, rect_v2, rect_color, 2)
     return img
 
 if __name__ == '__main__':
