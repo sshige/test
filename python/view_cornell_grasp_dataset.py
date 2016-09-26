@@ -35,7 +35,7 @@ if __name__ == '__main__':
     if len(param) > 1:
         dataset_dir = param[1]
     else:
-        dataset_dir = '/home/leus/Desktop/CornellGraspingDataset/raw'
+        dataset_dir = '/home/leus/dataset/CornellGraspingDataset/raw'
 
     for idx in range(0000, 1035):
         # set filename
