@@ -6,20 +6,23 @@ import pylab
 from svm_classifier import SVM_classifier
 
 class GenerateData2D:
-    def __init__(self, data_num=500):
+    def __init__(self, data_num=500, error_rate=0.1):
         self.xrange = [-10.0, 10.0]
         self.yrange = [-3.0, 3.0]
         self.dataset = []
         for i in range(data_num):
-            self.dataset.append(self.generate_data_one())
+            self.dataset.append(self.generate_data_one(error_rate=error_rate))
 
     def bound_func(self, x):
-        return np.sin(0.5 * x) + np.sin(1.0 * x) + np.sin(2.0 * x) + 0.25 * x
+        return np.sin(0.5 * x) + np.sin(1.0 * x) - np.sin(2.0 * x) + 0.25 * x
 
-    def generate_data_one(self):
+    def generate_data_one(self, error_rate=0.0):
         x = (self.xrange[1] - self.xrange[0]) * np.random.rand() + self.xrange[0]
         y = (self.yrange[1] - self.yrange[0]) * np.random.rand() + self.yrange[0]
-        return [[x, y], self.get_label_from_xy(x, y)]
+        l = self.get_label_from_xy(x, y)
+        if np.random.rand() < error_rate:
+            l = -1.0 if l == 1.0 else 1.0
+        return [[x, y], l]
 
     def get_label_from_xy(self, x, y):
         y_bound = self.bound_func(x)
@@ -39,7 +42,7 @@ class GenerateData2D:
         plt.scatter(x2, y2, color='red')
         plt.pause(0.1)
 
-    def visualize_region(self, svmc, division_num=20):
+    def visualize_region(self, svmc, division_num=25):
         xgrid = np.linspace(self.xrange[0], self.xrange[1], division_num)
         ygrid = np.linspace(self.yrange[0], self.yrange[1], division_num)
         xwidth = (self.xrange[1] - self.xrange[0]) / division_num
@@ -61,10 +64,11 @@ class GenerateData2D:
 if __name__ == '__main__':
     generate_data = GenerateData2D()
     ds = generate_data.dataset
-    generate_data.plot()
 
     svmc = SVM_classifier(ds)
     svmc.optimize()
     svmc.validate_dataset(ds[::10])
+
+    generate_data.plot()
     generate_data.visualize_region(svmc)
     # plt.show()
