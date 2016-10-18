@@ -64,15 +64,15 @@
       (send (elt *particle-list* i) :put :weight (/ (send (elt *particle-list* i) :get :weight) weight-sum))
       )
     ;; resample (Probabilistic Robotics p.101)
-    (let* ((M-inv (/ 1.0 (length *particle-list*)))
-           (r (random M-inv))
+    (let* ((m-inv (/ 1.0 (length *particle-list*)))
+           (r (random m-inv))
            (c (send (elt *particle-list* 0) :get :weight))
            (u r)
            (i 0)
            )
       (dotimes (k (length *particle-list*))
         (unless (= k 0)
-          (setq u (+ u M-inv)))
+          (setq u (+ u m-inv)))
         (while (> u c)
           (setq i (min (1+ i) (1- (length *particle-list*))))
           (setq c (+ c (send (elt *particle-list* i) :get :weight)))
@@ -102,12 +102,41 @@
   (send *irtviewer* :viewer :flush)
   )
 
+(defun visualize-particle-mean
+  ()
+  (visualize-particle-one (get-mean-coords *particle-list*))
+  (send *irtviewer* :viewer :flush)
+  )
+
 (defun visualize-particle-one
   (coords)
   (send *tmp-obj* :newcoords coords)
   (send *tmp-obj* :worldcoords) ;; for updating
   (send *tmp-obj* :draw-on :color (float-vector 1 0 0))
   )
+
+(defun get-mean-coords
+  (cl)
+  "
+  get mean coords of input coords list
+  arguments:
+    cl (list of coords): coords list
+  "
+  ;; E_n = (x_1 + x_2 + ... + x_n) / n
+  ;; E_(n+1) = ( n E_n + x_{n+1} ) / (n + 1)
+  (let* ((ret-c)
+         (n (length cl))
+         )
+    (dotimes (i n)
+      (cond ((= i 0)
+             (setq ret-c (elt cl i))
+             )
+            (t
+             (setq ret-c (midcoords (/ (float i) (1+ i)) (elt cl i) ret-c))
+             ))
+      )
+    ret-c))
+
 
 ;; main ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun main
@@ -118,7 +147,8 @@
    (filter)
    (x::window-main-one)
    (send *irtviewer* :draw-objects :flush nil)
-   (visualize-particle)
+   ;; (visualize-particle)
+   (visualize-particle-mean)
    (unix::usleep (* 10 1000))
    )
   )
