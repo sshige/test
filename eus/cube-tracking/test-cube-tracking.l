@@ -1,5 +1,17 @@
 (load "package://eus_qp/euslisp/eiquadprog.l")
 (load "package://eus_qpoases/euslisp/eus-qpoases.l")
+(load "package://eus_nlopt/euslisp/nlopt.l")
+
+(load "package://wholebody_manipulation_planner/euslisp/approx-obj-poly-body.l")
+
+
+(defvar *ex* (float-vector 1 0 0))
+(defvar *ey* (float-vector 0 1 0))
+(defvar *ez* (float-vector 0 0 1))
+
+(defvar *-ex* (float-vector -1 0 0))
+(defvar *-ey* (float-vector 0 -1 0))
+(defvar *-ez* (float-vector 0 0 -1))
 
 ;; setup ;;;;;;;;;;;;;;;;;;
 (defun setup-object
@@ -15,17 +27,166 @@
          (lz (+ (random (- lz-max lz-min)) lz-min))
          )
     (setq *obj* (make-cube lx ly lz))
-    (send *obj* :newcoords (get-random-coords))
+    ;; (setq *obj* (approx-blue-cart-poly-body))
+    ;; (setq *obj* (approx-drum-can-poly-body))
     (send *obj* :set-color (float-vector 0.8 0.5 0.5) 0.5)
+
+    ;; assoc grasp point
+    (let* ((grasp-pos
+            (float-vector (- (random lx) (* 0.5 lx)) (- (random ly) (* 0.5 ly)) (- (random lz) (* 0.5 lz))))
+           )
+      (send *obj* :put :grasp-point (make-cascoords :pos grasp-pos :parent *obj*))
+      (send *obj* :put :grasp-pos-in-obj-frame grasp-pos)
+      )
+
+    (send *obj* :newcoords (get-random-coords))
+    (send *obj* :worldcoords)
+    (send *obj* :translate (float-vector 0 0 (- (apply #'min (mapcar #'(lambda (x) (elt x 2)) (send *obj* :vertices))))) :world)
+
     (setq *model-obj* (copy-object *obj*))
     (send *model-obj* :set-color (float-vector 0.5 0.8 0.5) 0.5)
+
     (objects (list *obj* *model-obj*))
-    (send *irtviewer* :change-background (float-vector 1.0 1.0 1.0))
+    (send *irtviewer* :change-background (float-vector 0.8 0.8 0.8))
+    (send *irtviewer* :set-val 'x::draw-floor 1000)
     (send *irtviewer* :draw-objects)
     ))
 
 
-;; solve optimization ;;;;;;;;;;;;;;;;;;
+;; solve nonlinear optimization ;;;;;;;;;;;;;;;;;;
+(defun set-vec
+  (v vec)
+  (dotimes (i (length vec))
+    (setf (aref v i) (aref vec i))
+    )
+  )
+
+(defun set-mat
+  (v mat)
+  (let* ((height (cdr (assoc 'dim0 (send mat :slots))))
+         (width (cdr (assoc 'dim1 (send mat :slots))))
+         )
+    (dotimes (i height)
+      (dotimes (j width)
+        (setf (aref v (+ (* j height) i)) (aref mat i j))
+        ))
+    ))
+
+(defun-c-callable sample-f ((v1 :string) (v2 :string)) :integer
+  (setf (aref v2 0) (v. v1 v1))
+  0)
+
+(defun-c-callable sample-df ((v1 :string) (v2 :string)) :integer
+  (set-vec v2 (scale 2.0 v2))
+  0)
+
+(defun-c-callable sample-g ((v1 :string) (v2 :string)) :integer
+  (set-vec v2 (v- (transform *equality-matrix* v1) *equality-vector*))
+  0)
+
+(defun-c-callable sample-dg ((v1 :string) (v2 :string)) :integer
+  (set-mat v2 (transpose *equality-matrix*))
+  0)
+
+(defun-c-callable sample-h ((v1 :string) (v2 :string)) :integer
+  (setf (aref v2 0) 0)
+  0)
+
+(defun-c-callable sample-dh ((v1 :string) (v2 :string)) :integer
+  (set-vec v2 (instantiate float-vector 12))
+  0)
+
+(defun calc-pose-vec-with-nlopt
+  (constraint-coeff
+   &key
+   (initial-state nil)
+   (qp-solver #'solve-qpoases-qp)
+   (debug? nil)
+   )
+  "input coeff is vector-pose format."
+  (let* ((f-mat-eq
+          (cadr (assoc :f-mat-eq constraint-coeff)))
+         (d-vec-eq
+          (cadr (assoc :d-vec-eq constraint-coeff)))
+         (f-mat-ineq
+          (cadr (assoc :f-mat-ineq constraint-coeff)))
+         (d-vec-ineq
+          (cadr (assoc :d-vec-ineq constraint-coeff)))
+         ;; optimize function
+         (eval-weight-matrix
+          (unit-matrix 12)
+          )
+         (eval-coeff-vector
+          (instantiate float-vector 12))
+         ;; equality
+         (equality-matrix
+          f-mat-eq)
+         (equality-vector
+          (if d-vec-eq (v- d-vec-eq)))
+         ;; inequality
+         (inequality-matrix
+          f-mat-ineq)
+         (inequality-min-vector
+          (if d-vec-ineq (v- d-vec-ineq)))
+         ;; initial
+         (initial-state
+          (if initial-state initial-state (float-vector 0 0 0 1 0 0 0 1 0 0 0 1)))
+         opt-value
+         )
+    (when debug?
+      (when eval-weight-matrix
+        (warning-message 2 "eval-weight-matrix:~%")
+        (format-array eval-weight-matrix))
+      (when eval-coeff-vector
+        (warning-message 2 "eval-coeff-vector:~%")
+        (format-array eval-coeff-vector))
+      (when equality-matrix
+        (warning-message 2 "equality-matrix:~%")
+        (format-array equality-matrix))
+      (when equality-vector
+        (warning-message 2 "equality-vector:~%")
+        (format-array equality-vector))
+      (when inequality-matrix
+        (warning-message 2 "inequality-matrix:~%")
+        (format-array inequality-matrix))
+      (when inequality-min-vector
+        (warning-message 2 "inequality-min-vector:~%")
+        (format-array inequality-min-vector))
+      )
+
+    (setq *eval-weight-matrix* eval-weight-matrix)
+    (setq *eval-coeff-vector* eval-coeff-vector)
+    (setq *equality-matrix* equality-matrix)
+    (setq *equality-vector* equality-vector)
+    (setq *inequality-matrix* inequality-matrix)
+    (setq *inequality-min-vector* inequality-min-vector)
+
+    (let* ((pose-vec
+            (nlopt-optimize :ftol 1e-10 :xtol 1e-10 :eqthre 1e-10
+                            :alg SLSQP
+
+                            :initial-state initial-state
+                            :state-min-vector (float-vector -10e3 -10e3 -10e3 -1 -1 -1 -1 -1 -1 -1 -1 -1)
+                            :state-max-vector (float-vector 10e3 10e3 10e3 1 1 1 1 1 1 1 1 1)
+                            :state-dimension 12
+
+                            :evaluation-function 'sample-f
+                            :evaluation-function-gradient 'sample-df
+                            :equality-function 'sample-g
+                            :equality-function-gradient 'sample-dg
+                            :inequality-function 'sample-h
+                            :inequality-function-gradient 'sample-dh
+                            :equality-dimension (cdr (assoc 'dim0 (send *equality-matrix* :slots)))
+                            :inequality-dimension 1
+                            ))
+           )
+      (unless pose-vec
+        (warning-message 1 "[qp] qp failed.~%"))
+      pose-vec
+      )))
+
+
+;; solve QP optimization ;;;;;;;;;;;;;;;;;;
 (defun refine-pose-for-orthogonal
   (pose-vec constraint-coeff)
   (let* ((t-vec
@@ -44,56 +205,72 @@
           (matrix-determinant (m* u-mat (transpose v-mat))))
          (refined-r-mat
           (m* (m* u-mat (diagonal (float-vector 1 1 uv-det))) (transpose v-mat)))
+         (refined-r-vec
+          (mat2vec refined-r-mat))
+         (f-mat-eq
+          (cadr (assoc :f-mat-eq constraint-coeff)))
+         (d-vec-eq
+          (cadr (assoc :d-vec-eq constraint-coeff)))
+         (refined-t-vec t-vec)
          )
-    (let* ((f-mat
-            (cadr (assoc :f-mat constraint-coeff)))
-           (d-vec
-            (cadr (assoc :d-vec constraint-coeff)))
-           (refined-r-vec
-            (mat2vec refined-r-mat))
-           (f-mat-t
-            (block-matrix f-mat 0 0 nil 3))
-           (f-mat-r
-            (block-matrix f-mat 0 3 nil 9))
-           (refined-t-vec
-            (transform (pseudo-inverse f-mat-t) (v- (v- d-vec) (transform f-mat-r refined-r-vec))))
-           )
-      (list
-       (list :t-vec refined-t-vec)
-       (list :r-mat refined-r-mat)
-       )
-      )))
+    (when f-mat-eq
+      (let* ((f-mat-eq-t
+              (block-matrix f-mat-eq 0 0 nil 3))
+             (f-mat-eq-r
+              (block-matrix f-mat-eq 0 3 nil 9))
+             )
+        (setq refined-t-vec
+              (transform (pseudo-inverse f-mat-eq-t) (v- (v- d-vec-eq) (transform f-mat-eq-r refined-r-vec))))
+        ))
+    (print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+    (format t "uv-det: ~a~%" uv-det)
+    (format-array r-mat "R before: ")
+    (format-array refined-r-mat "R after: ")
+    (format-array t-vec "t before: ")
+    (format-array refined-t-vec "t after: ")
+    (print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+    (list
+     ;; (list :t-vec t-vec)
+     (list :t-vec refined-t-vec)
+     (list :r-mat refined-r-mat)
+     )
+    ))
 
-
-(defun get-pose-in-vector-format-with-qp
+(defun calc-pose-vec-with-qp
   (constraint-coeff
    &key
+   (initial-state nil)
    (qp-solver #'solve-qpoases-qp)
    (debug? nil)
    )
   "input coeff is vector-pose format."
-  (let* ((f-mat
-          (cadr (assoc :f-mat constraint-coeff)))
-         (d-vec
-          (cadr (assoc :d-vec constraint-coeff)))
+  (let* ((f-mat-eq
+          (cadr (assoc :f-mat-eq constraint-coeff)))
+         (d-vec-eq
+          (cadr (assoc :d-vec-eq constraint-coeff)))
+         (f-mat-ineq
+          (cadr (assoc :f-mat-ineq constraint-coeff)))
+         (d-vec-ineq
+          (cadr (assoc :d-vec-ineq constraint-coeff)))
          ;; optimize function
          (eval-weight-matrix
-          (unit-matrix 12))
+          (unit-matrix 12)
+          )
          (eval-coeff-vector
           (instantiate float-vector 12))
          ;; equality
          (equality-matrix
-          f-mat)
+          f-mat-eq)
          (equality-vector
-          (v- d-vec))
+          (if d-vec-eq (v- d-vec-eq)))
          ;; inequality
          (inequality-matrix
-          nil)
+          f-mat-ineq)
          (inequality-min-vector
-          nil)
+          (if d-vec-ineq (v- d-vec-ineq)))
          ;; initial
          (initial-state
-          (float-vector 0 0 0 1 0 0 0 1 0 0 0 1))
+          (if initial-state initial-state (float-vector 0 0 0 1 0 0 0 1 0 0 0 1)))
          opt-value
          )
     (when debug?
@@ -125,7 +302,7 @@
                    :equality-vector equality-vector
                    :inequality-matrix inequality-matrix
                    :inequality-min-vector inequality-min-vector
-                   :debug nil
+                   :debug t
                    (if (equal (car (send qp-solver :cdr)) 'solve-eiquadprog)
                        nil (list :check-status t))
                    ))
@@ -149,8 +326,8 @@
          (b-vec-list)
          (c-vec-list)
          (d-list)
-         (f-mat)
-         (d-vec)
+         (f-mat-eq)
+         (d-vec-eq)
          )
     (dolist (edge0 edge-list)
       (let* ((coeff-list (get-constraint-coeff-from-edge edge0))
@@ -176,20 +353,11 @@
         (list :c-vec-list c-vec-list)
         (list :d-list d-list)
         )))
-    (setq d-vec (coerce d-list float-vector))
-    (dotimes (i (length a-vec-list))
-      (cond (f-mat
-             (setq f-mat (concatenate-matrix-column f-mat (convert-constraint-coeff-from-se3-to-vector
-                                                           (elt a-vec-list i) (elt b-vec-list i) (elt c-vec-list i))))
-             )
-            (t
-             (setq f-mat (convert-constraint-coeff-from-se3-to-vector
-                          (elt a-vec-list i) (elt b-vec-list i) (elt c-vec-list i)))
-             ))
-      )
+    (setq d-vec-eq (coerce d-list float-vector))
+    (setq f-mat-eq (convert-constraint-coeff-list-from-se3-to-vector a-vec-list b-vec-list c-vec-list))
     (list
-     (list :d-vec d-vec)
-     (list :f-mat f-mat))
+     (list :d-vec-eq d-vec-eq)
+     (list :f-mat-eq f-mat-eq))
     ))
 
 (defun get-constraint-coeff-from-edge
@@ -202,8 +370,8 @@
          (obj-edge-param-local (get-edge-param (elt (send *obj* :edges) edge-id) :obj-frame? t))
          (obj-edge-pos-local (elt obj-edge-param-local 0))
          (obj-edge-dir-local (elt obj-edge-param-local 1))
-         (lambda-xy (v- (scale (elt edge-dir 1) (float-vector 1 0 0)) (scale (elt edge-dir 0) (float-vector 0 1 0))))
-         (lambda-xz (v- (scale (elt edge-dir 2) (float-vector 1 0 0)) (scale (elt edge-dir 0) (float-vector 0 0 1))))
+         (lambda-xy (v- (scale (elt edge-dir 1) *ex*) (scale (elt edge-dir 0) *ey*)))
+         (lambda-xz (v- (scale (elt edge-dir 2) *ex*) (scale (elt edge-dir 0) *ez*)))
          (a-vec-list)
          (b-vec-list)
          (c-vec-list)
@@ -253,12 +421,12 @@
          (d-list)
          )
     ;; constraint 1
-    (push (v- (scale (elt face-norm 1) (float-vector 1 0 0)) (scale (elt face-norm 0) (float-vector 0 1 0))) a-vec-list)
+    (push (v- (scale (elt face-norm 1) *ex*) (scale (elt face-norm 0) *ey*)) a-vec-list)
     (push obj-face-norm-local b-vec-list)
     (push (float-vector 0 0 0) c-vec-list)
     (push 0 d-list)
     ;; constraint 2
-    (push (v- (scale (elt face-norm 2) (float-vector 1 0 0)) (scale (elt face-norm 0) (float-vector 0 0 1))) a-vec-list)
+    (push (v- (scale (elt face-norm 2) *ex*) (scale (elt face-norm 0) *ez*)) a-vec-list)
     (push obj-face-norm-local b-vec-list)
     (push (float-vector 0 0 0) c-vec-list)
     (push 0 d-list)
@@ -275,6 +443,122 @@
      )
     ))
 
+(defun get-constraint-coeff-from-grasp-info
+  (grasp-info
+   &key
+   (debug? nil)
+   )
+  "return coeff in vector-pose format."
+  (let* ((p-ro (send *obj* :get :grasp-pos-in-obj-frame))
+         (p-grasp grasp-info)
+         (a-vec-list
+          (list *ex* *ey* *ez*))
+         (b-vec-list
+          (list p-ro p-ro p-ro))
+         (c-vec-list
+          (list *ex* *ey* *ez*))
+         (d-list
+          (list (- (elt p-grasp 0)) (- (elt p-grasp 1)) (- (elt p-grasp 2))))
+         (d-vec-eq)
+         (f-mat-eq)
+         )
+    (when debug?
+      (pprint
+       (list
+        (list :a-vec-list a-vec-list)
+        (list :b-vec-list b-vec-list)
+        (list :c-vec-list c-vec-list)
+        (list :d-list d-list)
+        )))
+    (setq d-vec-eq (coerce d-list float-vector))
+    (setq f-mat-eq (convert-constraint-coeff-list-from-se3-to-vector a-vec-list b-vec-list c-vec-list))
+    (list
+     (list :d-vec-eq d-vec-eq)
+     (list :f-mat-eq f-mat-eq))
+    ))
+
+(defun get-constraint-coeff-for-environment-collision
+  (&key
+   (debug? nil)
+   )
+  "return coeff in vector-pose format."
+  (let* ((vertices-list
+          (mapcar #'(lambda (x) (send *obj* :inverse-transform-vector x)) (send *obj* :vertices)))
+         (a-vec-list
+          (make-list (length vertices-list) :initial-element *ez*))
+         (b-vec-list
+          vertices-list)
+         (c-vec-list
+          (make-list (length vertices-list) :initial-element *ez*))
+         (d-list
+          (make-list (length vertices-list) :initial-element 0))
+         (d-vec-ineq)
+         (f-mat-ineq)
+         )
+    (when debug?
+      (pprint
+       (list
+        (list :a-vec-list a-vec-list)
+        (list :b-vec-list b-vec-list)
+        (list :c-vec-list c-vec-list)
+        (list :d-list d-list)
+        )))
+    (setq d-vec-ineq (coerce d-list float-vector))
+    (setq f-mat-ineq (convert-constraint-coeff-list-from-se3-to-vector a-vec-list b-vec-list c-vec-list))
+    (list
+     (list :d-vec-ineq d-vec-ineq)
+     (list :f-mat-ineq f-mat-ineq))
+    ))
+
+(defun merge-constraint-coeff
+  (constraint-coeff-list)
+  (let* ((f-mat-eq-ret)
+         (d-vec-eq-ret)
+         (f-mat-ineq-ret)
+         (d-vec-ineq-ret)
+         )
+    (dolist (constraint-coeff constraint-coeff-list)
+      (let* ((f-mat-eq (cadr (assoc :f-mat-eq constraint-coeff)))
+             (d-vec-eq (cadr (assoc :d-vec-eq constraint-coeff)))
+             (f-mat-ineq (cadr (assoc :f-mat-ineq constraint-coeff)))
+             (d-vec-ineq (cadr (assoc :d-vec-ineq constraint-coeff)))
+             )
+        (when f-mat-eq
+          (cond (f-mat-eq-ret
+                 (setq f-mat-eq-ret (concatenate-matrix-column f-mat-eq-ret f-mat-eq))
+                 )
+                (t
+                 (setq f-mat-eq-ret f-mat-eq)
+                 )))
+        (when f-mat-eq
+          (cond (d-vec-eq-ret
+                 (setq d-vec-eq-ret (concatenate float-vector d-vec-eq-ret d-vec-eq))
+                 )
+                (t
+                 (setq d-vec-eq-ret d-vec-eq)
+                 )))
+        (when f-mat-ineq
+          (cond (f-mat-ineq-ret
+                 (setq f-mat-ineq-ret (concatenate-matrix-column f-mat-ineq-ret f-mat-ineq))
+                 )
+                (t
+                 (setq f-mat-ineq-ret f-mat-ineq)
+                 )))
+        (when f-mat-ineq
+          (cond (d-vec-ineq-ret
+                 (setq d-vec-ineq-ret (concatenate float-vector d-vec-ineq-ret d-vec-ineq))
+                 )
+                (t
+                 (setq d-vec-ineq-ret d-vec-ineq)
+                 )))
+        ))
+    (list
+     (list :d-vec-eq d-vec-eq-ret)
+     (list :f-mat-eq f-mat-eq-ret)
+     (list :d-vec-ineq d-vec-ineq-ret)
+     (list :f-mat-ineq f-mat-ineq-ret))
+    ))
+
 (defun convert-constraint-coeff-from-se3-to-vector
   (a-vec b-vec c-vec)
   (assert (= (length a-vec) 3))
@@ -287,13 +571,29 @@
     (concatenate-matrix-row c-mat (scale-matrix (aref b-mat 0 0) a-mat) (scale-matrix (aref b-mat 0 1) a-mat) (scale-matrix (aref b-mat 0 2) a-mat))
     ))
 
+(defun convert-constraint-coeff-list-from-se3-to-vector
+  (a-vec-list b-vec-list c-vec-list)
+  (let* ((f-mat-eq)
+         )
+    (dotimes (i (length a-vec-list))
+      (cond (f-mat-eq
+             (setq f-mat-eq (concatenate-matrix-column f-mat-eq (convert-constraint-coeff-from-se3-to-vector
+                                                                 (elt a-vec-list i) (elt b-vec-list i) (elt c-vec-list i))))
+             )
+            (t
+             (setq f-mat-eq (convert-constraint-coeff-from-se3-to-vector
+                             (elt a-vec-list i) (elt b-vec-list i) (elt c-vec-list i)))
+             ))
+      )
+    f-mat-eq
+    ))
+
 
 ;; sensor ;;;;;;;;;;;;;;;;;;
 (defun get-random-vision-info
-  ()
-  (let* ((edge-num 0)
-         (face-num 2)
-         (edge-list)
+  (&key (edge-num 3)
+        (face-num 0))
+  (let* ((edge-list)
          (face-list)
          )
     (dotimes (i edge-num)
@@ -314,6 +614,11 @@
         ))
     (list edge-list face-list)
     ))
+
+(defun get-grasp-info
+  ()
+  (send (send *obj* :get :grasp-point) :worldpos)
+  )
 
 
 ;; object ;;;;;;;;;;;;;;;;;;
@@ -401,6 +706,14 @@
 
 
 ;; math ;;;;;;;;;;;;;;;;;;
+(defun get-pose-vec-from-coords
+  (&optional (c (send (send *obj* :worldcoords) :copy-worldcoords)))
+  (let* ((pos (send c :worldpos))
+         (rot (send c :worldrot))
+         )
+    (concatenate float-vector pos (mat2vec rot))
+    ))
+
 (defun vec2mat
   (vec)
   (let* ((r1-vec
@@ -475,129 +788,144 @@
         ))))
 
 
-;; test ;;;;;;;;;;;;;;;;;;
-(defun test
-  ()
-  (setup-object)
-  (let* ((vision-info
-          (get-random-vision-info))
-         (edge-list
+;; draw ;;;;;;;;;;;;;;;;;;
+(defun draw-vision-info
+  (vision-info
+   &key
+   (draw-estimation-result? nil)
+   )
+  (let* ((edge-list
           (elt vision-info 0))
          (face-list
           (elt vision-info 1))
-         (constraint-coeff
+         )
+    (dolist (edge0 edge-list)
+      (let* ((edge-param (elt edge0 0))
+             (edge-id (elt edge0 1))
+             )
+        (send (elt (send *obj* :edges) edge-id) :draw-on :flush t :color #f(1 0 0) :width 12.0)
+        (when draw-estimation-result?
+          (send (elt (send *model-obj* :edges) edge-id) :draw-on :flush t :color #f(0 1 0) :width 12.0))
+        ))
+    (dolist (face0 face-list)
+      (let* ((face-param (elt face0 0))
+             (face-id (elt face0 1))
+             )
+        (send (elt (send *obj* :faces) face-id) :draw-on :flush t :color #f(0.6 0.2 0.2) :width 4.0)
+        (when draw-estimation-result?
+          (send (elt (send *model-obj* :faces) face-id) :draw-on :flush t :color #f(0.2 0.6 0.2) :width 4.0))
+        ))
+    ))
+
+(defun draw-grasp-info
+  (&key
+   (draw-estimation-result? nil)
+   )
+  (send (send (send *obj* :get :grasp-point) :worldpos) :draw-on :flush t :color #f(0 0 1) :width 10 :size 20)
+  (when draw-estimation-result?
+    (send (send (send *model-obj* :get :grasp-point) :worldpos) :draw-on :flush t :color #f(0.2 0.2 0.6) :width 10 :size 20)
+    )
+  )
+
+;; test ;;;;;;;;;;;;;;;;;;
+(defun test
+  (&key (edge-num 0)
+        (face-num 1)
+        (use-grasp? nil)
+        (use-environment-collision? nil)
+        )
+  (setup-object)
+  (let* ((vision-info
+          (get-random-vision-info :edge-num edge-num :face-num face-num))
+         (constraint-coeff-vision
           (get-constraint-coeff-from-vision-info vision-info :debug? nil))
+         (grasp-info
+          (get-grasp-info))
+         (constraint-coeff-grasp
+          (get-constraint-coeff-from-grasp-info grasp-info :debug? nil))
+         (constraint-coeff-environment-collision
+          (get-constraint-coeff-for-environment-collision))
+         (constraint-coeff
+          (merge-constraint-coeff
+           (append nil
+                   (list constraint-coeff-vision)
+                   (if use-grasp? (list constraint-coeff-grasp))
+                   (if use-environment-collision? (list constraint-coeff-environment-collision))
+                   ))
+          )
          (pose-vec
-          (get-pose-in-vector-format-with-qp constraint-coeff :debug? nil))
+          (calc-pose-vec-with-nlopt constraint-coeff :debug? nil))
+         ;; (pose-vec
+         ;;  (calc-pose-vec-with-qp constraint-coeff :debug? nil))
          (est-pose
           (refine-pose-for-orthogonal pose-vec constraint-coeff))
          (est-pos (cadr (assoc :t-vec est-pose)))
          (est-rot (cadr (assoc :r-mat est-pose)))
          (est-rpy (coerce (car (rpy-angle est-rot)) float-vector))
+         (est-pose-vec (concatenate float-vector est-pos (mat2vec est-rot)))
          (gt-pos (send *obj* :worldpos))
          (gt-rpy (coerce (car (rpy-angle (send *obj* :worldrot))) float-vector))
          )
 
+    ;; apply result
     (send *model-obj* :newcoords (make-coords :pos est-pos :rot est-rot))
     (send *irtviewer* :draw-objects)
 
-    (dolist (edge0 edge-list)
-      (let* ((edge-param (elt edge0 0))
-             (edge-id (elt edge0 1))
-             )
-        (send (elt (send *obj* :edges) edge-id) :draw-on :flush t :color #f(1 0 0) :width 5)
-        (send (elt (send *model-obj* :edges) edge-id) :draw-on :flush t :color #f(0 1 0) :width 5)
-        ))
-    (dolist (face0 face-list)
-      (let* ((face-param (elt face0 0))
-             (face-id (elt face0 1))
-             )
-        (send (elt (send *obj* :faces) face-id) :draw-on :flush t :color #f(1 0 0) :width 5)
-        (send (elt (send *model-obj* :faces) face-id) :draw-on :flush t :color #f(0 1 0) :width 5)
-        ))
+    ;; draw result
+    (draw-vision-info vision-info :draw-estimation-result? t)
+    (when use-grasp?
+      (draw-grasp-info :draw-estimation-result? t))
 
-    (format-array (cadr (assoc :f-mat constraint-coeff)) "f-mat: ")
-    (format-array (cadr (assoc :d-vec constraint-coeff)) "d-vec: ")
-
-    (warning-message 2 "pos~%")
+    ;; print result
+    (warning-message 2 "estimation result:~%")
+    (warning-message 9 "pos~%")
     (format-array est-pos "estimated:    ")
     (format-array gt-pos "ground truth: ")
-    (warning-message 2 "rpy~%")
+    (warning-message 9 "rpy~%")
     (format-array est-rpy "estimated:    ")
     (format-array gt-rpy "ground truth: ")
 
-    (let* ((f-mat (cadr (assoc :f-mat constraint-coeff)))
-           (d-vec (cadr (assoc :d-vec constraint-coeff)))
-           (refined-pose-vec (concatenate float-vector est-pos (mat2vec est-rot)))
+    ;; check result
+    (let* ((f-mat-eq (cadr (assoc :f-mat-eq constraint-coeff)))
+           (d-vec-eq (cadr (assoc :d-vec-eq constraint-coeff)))
+           (f-mat-ineq (cadr (assoc :f-mat-ineq constraint-coeff)))
+           (d-vec-ineq (cadr (assoc :d-vec-ineq constraint-coeff)))
+           (refined-pose-vec est-pose-vec)
+           (ret-without-refine)
+           (ret-with-refine)
+           (ret-ground-truth)
            )
-      (warning-message 1 "constraint error without refine: ~a~%" (v+ (transform f-mat pose-vec) d-vec))
-      (warning-message 1 "constraint error with refine: ~a~%" (v+ (transform f-mat refined-pose-vec) d-vec))
+      (when f-mat-eq
+        (setq ret-without-refine (v+ (transform f-mat-eq pose-vec) d-vec-eq))
+        (setq ret-with-refine (v+ (transform f-mat-eq refined-pose-vec) d-vec-eq))
+        (setq ret-ground-truth (v+ (transform f-mat-eq (get-pose-vec-from-coords)) d-vec-eq))
+        (warning-message 2 "equality constraint:~%")
+        (format-array ret-without-refine (format nil "constraint error without refine [~a]: " (norm ret-without-refine)))
+        (format-array ret-with-refine (format nil "constraint error with refine [~a]: " (norm ret-with-refine)))
+        (format-array ret-ground-truth (format nil "ground truth [~a]: " (norm ret-ground-truth)))
+        )
+
+      (when f-mat-ineq
+        (setq ret-without-refine (v+ (transform f-mat-ineq pose-vec) d-vec-ineq))
+        (setq ret-with-refine (v+ (transform f-mat-ineq refined-pose-vec) d-vec-ineq))
+        (setq ret-ground-truth (v+ (transform f-mat-ineq (get-pose-vec-from-coords)) d-vec-ineq))
+        (warning-message 2 "inequality constraint:~%")
+        (format-array ret-without-refine (format nil "constraint error without refine [~a]: " (apply #'min (coerce ret-without-refine cons))))
+        (format-array ret-with-refine (format nil "constraint error with refine [~a]: " (apply #'min (coerce ret-with-refine cons))))
+        (format-array ret-ground-truth (format nil "ground truth [~a]: " (apply #'min (coerce ret-ground-truth cons))))
+        )
+
+      (warning-message 2 "constraint matrix:~%")
+      (when f-mat-eq (format-array f-mat-eq "f-mat-eq: "))
+      (when d-vec-eq (format-array d-vec-eq "d-vec-eq: "))
+      (when f-mat-ineq (format-array f-mat-ineq "f-mat-ineq: "))
+      (when d-vec-ineq (format-array d-vec-ineq "d-vec-ineq: "))
       )
-    ))
-
-(defun test-tmp
-  ()
-  (send *obj* :newcoords (make-coords :rpy (list 0.3 -0.3 -0.3)))
-  (let* ((edge-id 7)
-         (vision-info
-          (list (list (list (get-edge-param (elt (send *obj* :edges) edge-id)) edge-id)) nil)
-          (get-random-vision-info))
-         (edge-list
-          (elt vision-info 0))
-         (face-list
-          (elt vision-info 1))
-         (constraint-coeff
-          (get-constraint-coeff-from-vision-info vision-info :debug? nil))
-         (pose-vec
-          (get-pose-in-vector-format-with-qp constraint-coeff :debug? nil))
-         (est-pose
-          (refine-pose-for-orthogonal pose-vec constraint-coeff))
-         (est-pos (cadr (assoc :t-vec est-pose)))
-         (est-rot (cadr (assoc :r-mat est-pose)))
-         (est-rpy (coerce (car (rpy-angle est-rot)) float-vector))
-         (gt-pos (send *obj* :worldpos))
-         (gt-rpy (coerce (car (rpy-angle (send *obj* :worldrot))) float-vector))
-         )
-
-    (dolist (edge0 edge-list)
-      (let* ((edge-param (elt edge0 0))
-             (edge-id (elt edge0 1))
-             )
-        (send (elt (send *obj* :edges) edge-id) :draw-on :flush t :color #f(1 0 0) :width 5)
-        ))
-    (dolist (face0 face-list)
-      (let* ((face-param (elt face0 0))
-             (face-id (elt face0 1))
-             )
-        (send (elt (send *obj* :faces) face-id) :draw-on :flush t :color #f(1 0 0) :width 5)
-        ))
-    (send *model-obj* :newcoords (make-coords :pos est-pos :rot est-rot))
-    (send *model-obj* :worldcoords)
-    (send *model-obj* :draw-on :flush t :color #f(0 1 0) :width 5)
-
-    (format-array (cadr (assoc :f-mat constraint-coeff)) "f-mat: ")
-    (format-array (cadr (assoc :d-vec constraint-coeff)) "d-vec: ")
-
-    (warning-message 1 "pos~%")
-    (format-array est-pos "estimated:    ")
-    (format-array gt-pos "ground truth: ")
-    (warning-message 1 "rpy~%")
-    (format-array est-rpy "estimated:    ")
-    (format-array gt-rpy "ground truth: ")
-
-    (let* ((f-mat (cadr (assoc :f-mat constraint-coeff)))
-           (d-vec (cadr (assoc :d-vec constraint-coeff)))
-           (refined-pose-vec (concatenate float-vector est-pos (mat2vec est-rot)))
-           )
-      (warning-message 1 "constraint error without refine: ~a~%" (v+ (transform f-mat pose-vec) d-vec))
-      (warning-message 1 "constraint error with refine: ~a~%" (v+ (transform f-mat refined-pose-vec) d-vec))
-      )
-
     ))
 
 
 
 #|
-(format-array (cadr (assoc :f-mat (get-constraint-coeff-from-vision-info (get-random-vision-info)))))
+(format-array (cadr (assoc :f-mat-eq (get-constraint-coeff-from-vision-info (get-random-vision-info)))))
 (get-pose-in-vector-format-with-qp (get-constraint-coeff-from-vision-info (get-random-vision-info)) :debug? t)
 (refine-pose-for-orthogonal (get-pose-in-vector-format-with-qp (get-constraint-coeff-from-vision-info (get-random-vision-info)) :debug? nil))
