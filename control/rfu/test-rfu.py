@@ -22,5 +22,45 @@ def check_linear_dependent(X):
 # m = 1.0
 # p_g = np.array([0.0, 0.4])
 
-GG=np.linalg.qr(np.linalg.pinv(G))[0].transpose()
-GnullG=np.linalg.qr(G_null)[0].transpose()[0]
+# G_base = np.linalg.qr(np.linalg.pinv(G))[0].transpose()
+# G_null_base = np.linalg.qr(G_null)[0].transpose()[0]
+
+np.c_(np.cross(np.array([1,2,3]), np.identity(3)), np.identity(3))
+
+p1 = np.array([-1.0,0.0,3.0])
+p2 = np.array([2.0,0.0,3.0])
+G=np.r_[np.c_[np.identity(3), np.identity(3)],np.c_[np.cross(p1, np.identity(3)), np.cross(p2, np.identity(3))]]
+
+G=np.r_[np.c_[np.identity(3), np.zeros((3,3)), np.identity(3), np.zeros((3,3))],np.c_[np.cross(p1, np.identity(3)), np.identity(3), np.cross(p2, np.identity(3)), np.identity(3)]]
+
+
+from __future__ import print_function
+
+for i in range(G_null.shape[0]):
+    print('  \\bm{e_{ex}^1} &=& \\begin{pmatrix} ', end='')
+    for j in range(G_null[i].shape[0]):
+        if np.abs(G_null[i][j]) < 1e-10:
+            print(0, end=' & ')
+        else:
+            print('{0:.2f}'.format(G_null[i][j]), end=' & ')
+    print('\\end{pmatrix}^T\\\\')
+
+
+for i in range(G_base.shape[0]):
+    print('  \\bm{e_{ex}^1} &=& \\begin{pmatrix} ', end='')
+    for j in range(G_base[i].shape[0]):
+        if np.abs(G_base[i][j]) < 1e-10:
+            print(0, end=' & ')
+        else:
+            print('{0:.2f}'.format(G_base[i][j]), end=' & ')
+    print('\\end{pmatrix}^T\\\\')
+
+for i in range(G_null_base[0:6].shape[0]):
+    print('  \\bm{e_{in}^1} &=& \\begin{pmatrix} ', end='')
+    for j in range(G_null_base[0:6][i].shape[0]):
+        if np.abs(G_null_base[0:6][i][j]) < 1e-10:
+            print(0, end=' & ')
+        else:
+            print('{0:.2f}'.format(G_null_base[0:6][i][j]), end=' & ')
+    print('\\end{pmatrix}^T\\\\')
+

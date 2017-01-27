@@ -1,0 +1,6 @@
+devel_space: /home/murooka/test/ros/beginner_tutorials/devel
+install: false
+install_space: /home/murooka/test/ros/beginner_tutorials/install
+profile: default
+source_space: /home/murooka/test/ros/beginner_tutorials/src
+workspace: /home/murooka/test/ros/beginner_tutorials
