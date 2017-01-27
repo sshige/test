@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <stdlib.h>
 
 #include <boost/thread/thread.hpp>
 #include <Eigen/Core>
@@ -26,20 +27,27 @@ int main (int argc, char **argv)
   // check argument
   std::string input_pcd_file = "../pcd/chef.pcd";
   TransformationEstimationAlgorithm alg = SVD;
+  double delta_x = 0.5, delta_yaw = 1.0;
   int opt;
   opterr = 0;
-  while ((opt = getopt(argc, argv, "i:a:")) != -1) {
+  while ((opt = getopt(argc, argv, "i:a:t:r:")) != -1) {
+    std::string optarg_string = optarg;
     switch (opt) {
     case 'i':
       input_pcd_file = optarg;
       break;
     case 'a':
-      std::string optarg_string = optarg;
       if (optarg_string == "svd" || optarg_string == "SVD") {
         alg = SVD;
       } else if (optarg_string == "lm" || optarg_string == "LM") {
         alg = LM;
       }
+      break;
+    case 't':
+      delta_x = atof(optarg);
+      break;
+    case 'r':
+      delta_yaw = atof(optarg);
       break;
     }
   }
@@ -62,8 +70,8 @@ int main (int argc, char **argv)
   // transform pointcloud with actual transformation
   Eigen::Affine3f act_trans = Eigen::Affine3f::Identity();
   Eigen::Affine3f est_trans;
-  act_trans.translation () << 0.5, 0.0, 0.0;
-  act_trans.rotate (Eigen::AngleAxisf (1.0, Eigen::Vector3f::UnitZ()));
+  act_trans.translation () << delta_x, 0.0, 0.0;
+  act_trans.rotate (Eigen::AngleAxisf (delta_yaw, Eigen::Vector3f::UnitZ()));
   pcl::transformPointCloud (*object, *object_act_transformed, act_trans);
 
   // estimate transformation
@@ -94,10 +102,10 @@ int main (int argc, char **argv)
   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> rgb_object (object, 255, 0, 0);
   viewer->addPointCloud<pcl::PointXYZ> (object, rgb_object, "object");
-  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "object");
+  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "object");
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> rgb_object_act_transformed (object_act_transformed, 0, 255, 0);
   viewer->addPointCloud<pcl::PointXYZ> (object_act_transformed, rgb_object_act_transformed, "object_act_transformed");
-  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "object_act_transformed");
+  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "object_act_transformed");
   pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> rgb_object_est_transformed (object_est_transformed, 0, 0, 255);
   viewer->addPointCloud<pcl::PointXYZ> (object_est_transformed, rgb_object_est_transformed, "object_est_transformed");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "object_est_transformed");
