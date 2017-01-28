@@ -19,9 +19,9 @@
 #include <pcl/registration/transformation_estimation_point_to_plane_lls.h>
 
 typedef pcl::PointXYZ PointXYZ;
-typedef pcl::PointNormal PointN;
+typedef pcl::PointNormal PointNormal;
 typedef pcl::PointCloud<PointXYZ> PointCloudXYZ;
-typedef pcl::PointCloud<PointN> PointCloudN;
+typedef pcl::PointCloud<PointNormal> PointCloudNormal;
 
 
 typedef enum {
@@ -71,7 +71,7 @@ int main (int argc, char **argv)
   PointCloudXYZ::Ptr object (new PointCloudXYZ);
   PointCloudXYZ::Ptr object_act_transformed (new PointCloudXYZ);
   PointCloudXYZ::Ptr object_est_transformed (new PointCloudXYZ);
-  PointCloudN::Ptr object_act_transformed_normal (new PointCloudN);
+  PointCloudNormal::Ptr object_act_transformed_normal (new PointCloudNormal);
   pcl::console::print_highlight ("Loading point clouds...\n");
   if (pcl::io::loadPCDFile<PointXYZ> (input_pcd_file, *object_raw) < 0) {
     pcl::console::print_error ("Error loading object/scene file!\n");
@@ -92,7 +92,7 @@ int main (int argc, char **argv)
   // calculate norm for plane
   if (alg == LM_Plane || alg == LLS_Plane) {
     pcl::copyPointCloud(*object_act_transformed, *object_act_transformed_normal);
-    pcl::NormalEstimation< PointXYZ, PointN > ne;
+    pcl::NormalEstimation< PointXYZ, PointNormal > ne;
     ne.setInputCloud (object_act_transformed);
     pcl::search::KdTree< PointXYZ >::Ptr tree (new pcl::search::KdTree< PointXYZ > ());
     ne.setSearchMethod (tree);
@@ -103,7 +103,7 @@ int main (int argc, char **argv)
   // estimate transformation
   clock_t begin_clock = clock();
   boost::shared_ptr< pcl::registration::TransformationEstimation< PointXYZ, PointXYZ > > est;
-  boost::shared_ptr< pcl::registration::TransformationEstimation< PointXYZ, PointN > > est_normal;
+  boost::shared_ptr< pcl::registration::TransformationEstimation< PointXYZ, PointNormal > > est_normal;
   switch (alg) {
   case SVD:
     pcl::console::print_info ("Algorithm: SVD\n");
@@ -115,11 +115,11 @@ int main (int argc, char **argv)
     break;
   case LM_Plane:
     pcl::console::print_info ("Algorithm: LM_Plane\n");
-    est_normal.reset ( new pcl::registration::TransformationEstimationPointToPlane < PointXYZ, PointN > () );
+    est_normal.reset ( new pcl::registration::TransformationEstimationPointToPlane < PointXYZ, PointNormal > () );
     break;
   case LLS_Plane:
     pcl::console::print_info ("Algorithm: LLS_Plane\n");
-    est_normal.reset ( new pcl::registration::TransformationEstimationPointToPlaneLLS < PointXYZ, PointN > () );
+    est_normal.reset ( new pcl::registration::TransformationEstimationPointToPlaneLLS < PointXYZ, PointNormal > () );
     break;
   default:
     pcl::console::print_error ("Invalid algorithm for estimating transformation!\n");
@@ -173,7 +173,7 @@ int main (int argc, char **argv)
   viewer->addPointCloud<PointXYZ> (object_est_transformed, rgb_object_est_transformed, "object_est_transformed");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "object_est_transformed");
   if (alg == LM_Plane || alg == LLS_Plane) {
-    viewer->addPointCloudNormals<PointXYZ, PointN> (object_act_transformed, object_act_transformed_normal, 10, 0.02, "object_act_transformed_normal");
+    viewer->addPointCloudNormals<PointXYZ, PointNormal> (object_act_transformed, object_act_transformed_normal, 10, 0.02, "object_act_transformed_normal");
   }
   viewer->spin();
 
