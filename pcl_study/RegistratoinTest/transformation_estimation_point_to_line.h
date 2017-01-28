@@ -85,6 +85,13 @@ namespace pcl
           return computeDistance (p_src_vec, p_tgt);
         }
 
+      /**
+       *  \brief compute distance between point and line
+       *  \param p_src  point in source
+       *  \param p_tgt  edge in target
+       *                x,y,z represents start point and norm_x,y,z represents vector from start point to end point.
+       *                edge length is not considered if consider_edge_length is false.
+       */
         virtual Scalar
         computeDistance (const Vector4 &p_src, const PointTarget &p_tgt) const
         {

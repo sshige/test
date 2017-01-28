@@ -34,6 +34,13 @@ typedef enum {
 } TransformationEstimationAlgorithm;
 
 
+/**
+ *  \brief add points on edge to pointcloud instance.
+ *  \param cloud  cloud to store point
+ *  \param p_start  start pont of edge
+ *  \param p_end  end pont of edge
+ *  \param np  number of sampled points
+ */
 void addEdgePoints (PointCloudNormal &cloud, const Eigen::Vector3f p_start, const Eigen::Vector3f p_end, const int np)
 {
   for (float i = 0.0; i <= 1.0; i += (1.0 / np)) {
@@ -50,6 +57,14 @@ void addEdgePoints (PointCloudNormal &cloud, const Eigen::Vector3f p_start, cons
   }
 }
 
+/**
+ *  \brief add points representing edge to pointcloud instance.
+ *         x,y,z represents start point and norm_x,y,z represents vector from start point to end point.
+ *  \param cloud  cloud to store point
+ *  \param p_start  start pont of edge
+ *  \param p_end  end pont of edge
+ *  \param np  number of sampled points
+ */
 void addEdgeLine (PointCloudNormal &cloud, const Eigen::Vector3f p_start, const Eigen::Vector3f p_end, const int np)
 {
   Eigen::Vector3f p_mid_vec(p_start);
