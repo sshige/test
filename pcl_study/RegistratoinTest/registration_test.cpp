@@ -64,23 +64,36 @@ void addEdgePoints (PointCloudNormal &cloud, const Eigen::Vector3f p_start, cons
  *  \param p_start  start pont of edge
  *  \param p_end  end pont of edge
  *  \param np  number of sampled points
+ *  \param start_ratio  distance ratio of start point in edge direction
+ *  \param end_ratio  distance ratio of end point in edge direction
  */
-void addEdgeLine (PointCloudNormal &cloud, const Eigen::Vector3f p_start, const Eigen::Vector3f p_end, const int np)
+void addEdgeLine (PointCloudNormal &cloud,
+                  const Eigen::Vector3f p_start,
+                  const Eigen::Vector3f p_end,
+                  const int np,
+                  const double start_ratio = 0.0,
+                  const double end_ratio = 1.0
+                  )
 {
   Eigen::Vector3f d_vec((p_end - p_start));
+  Eigen::Vector3f p_start_with_ratio = p_start + start_ratio * d_vec;
+  Eigen::Vector3f d_vec_with_ratio = (end_ratio - start_ratio) * d_vec;
   PointNormal p;
-  p.x = p_start(0);
-  p.y = p_start(1);
-  p.z = p_start(2);
-  p.normal_x = d_vec(0);
-  p.normal_y = d_vec(1);
-  p.normal_z = d_vec(2);
+  p.x = p_start_with_ratio(0);
+  p.y = p_start_with_ratio(1);
+  p.z = p_start_with_ratio(2);
+  p.normal_x = d_vec_with_ratio(0);
+  p.normal_y = d_vec_with_ratio(1);
+  p.normal_z = d_vec_with_ratio(2);
   for (float i = 0.0; i <= 1.0; i += (1.0 / np)) {
     cloud.points.push_back(p);
   }
 }
 
 
+/**
+ *  \brief three orthogonal edges. points are sampled from all range of edges.
+ */
 void generateCubeEdgePointCloud1 (PointCloudNormal &points, PointCloudNormal &edges)
 {
   Eigen::Vector3f e1_start(0, 0, 0);
@@ -105,6 +118,9 @@ void generateCubeEdgePointCloud1 (PointCloudNormal &points, PointCloudNormal &ed
   edges.height = 1;
 }
 
+/**
+ *  \brief three parallel edges. points are sampled from all range of edges.
+ */
 void generateCubeEdgePointCloud2 (PointCloudNormal &points, PointCloudNormal &edges)
 {
   Eigen::Vector3f e1_start(0, 0, 0);
@@ -125,6 +141,114 @@ void generateCubeEdgePointCloud2 (PointCloudNormal &points, PointCloudNormal &ed
   addEdgeLine (edges, e1_start, e1_end, 10);
   addEdgeLine (edges, e2_start, e2_end, 20);
   addEdgeLine (edges, e3_start, e3_end, 10);
+  edges.width = (int) edges.points.size ();
+  edges.height = 1;
+}
+
+/**
+ *  \brief three edges which are neither orthogonal nor parallel. points are sampled from all range of edges.
+ */
+void generateCubeEdgePointCloud3 (PointCloudNormal &points, PointCloudNormal &edges)
+{
+  Eigen::Vector3f e1_start(0, 0, 0);
+  Eigen::Vector3f e1_end(0, 0, 0.1);
+  Eigen::Vector3f e2_start(0.1, 0, -0.1);
+  Eigen::Vector3f e2_end(0.1, 0.2, 0);
+  Eigen::Vector3f e3_start(0, 0.1, 0);
+  Eigen::Vector3f e3_end(-0.1, 0.1, 0.2);
+
+  // store points
+  addEdgePoints (points, e1_start, e1_end, 10);
+  addEdgePoints (points, e2_start, e2_end, 20);
+  addEdgePoints (points, e3_start, e3_end, 10);
+  points.width = (int) points.points.size ();
+  points.height = 1;
+
+  // store edges
+  addEdgeLine (edges, e1_start, e1_end, 10);
+  addEdgeLine (edges, e2_start, e2_end, 20);
+  addEdgeLine (edges, e3_start, e3_end, 10);
+  edges.width = (int) edges.points.size ();
+  edges.height = 1;
+}
+
+/**
+ *  \brief three orthogonal edges. points are sampled from partial range of edges.
+ */
+void generateCubeEdgePointCloud4 (PointCloudNormal &points, PointCloudNormal &edges)
+{
+  Eigen::Vector3f e1_start(0, 0, 0);
+  Eigen::Vector3f e1_end(0.1, 0, 0);
+  Eigen::Vector3f e2_start(0, 0, 0);
+  Eigen::Vector3f e2_end(0, 0.1, 0);
+  Eigen::Vector3f e3_start(0, 0, 0);
+  Eigen::Vector3f e3_end(0, 0, 0.2);
+
+  // store points
+  addEdgePoints (points, e1_start, e1_end, 10);
+  addEdgePoints (points, e2_start, e2_end, 20);
+  addEdgePoints (points, e3_start, e3_end, 10);
+  points.width = (int) points.points.size ();
+  points.height = 1;
+
+  // store edges
+  addEdgeLine (edges, e1_start, e1_end, 10, -2.5, 3.0);
+  addEdgeLine (edges, e2_start, e2_end, 20, -2.0, 2.5);
+  addEdgeLine (edges, e3_start, e3_end, 10, -2.0, 3.0);
+  edges.width = (int) edges.points.size ();
+  edges.height = 1;
+}
+
+/**
+ *  \brief three parallel edges. points are sampled from partial range of edges.
+ */
+void generateCubeEdgePointCloud5 (PointCloudNormal &points, PointCloudNormal &edges)
+{
+  Eigen::Vector3f e1_start(0, 0, 0);
+  Eigen::Vector3f e1_end(0, 0, 0.1);
+  Eigen::Vector3f e2_start(0.1, 0, -0.1);
+  Eigen::Vector3f e2_end(0.1, 0, 0);
+  Eigen::Vector3f e3_start(0, 0.1, 0);
+  Eigen::Vector3f e3_end(0, 0.1, 0.2);
+
+  // store points
+  addEdgePoints (points, e1_start, e1_end, 10);
+  addEdgePoints (points, e2_start, e2_end, 20);
+  addEdgePoints (points, e3_start, e3_end, 10);
+  points.width = (int) points.points.size ();
+  points.height = 1;
+
+  // store edges
+  addEdgeLine (edges, e1_start, e1_end, 10, -2.5, 3.0);
+  addEdgeLine (edges, e2_start, e2_end, 20, -2.0, 2.5);
+  addEdgeLine (edges, e3_start, e3_end, 10, -2.0, 3.0);
+  edges.width = (int) edges.points.size ();
+  edges.height = 1;
+}
+
+/**
+ *  \brief three edges which are neither orthogonal nor parallel. points are sampled from partial range of edges.
+ */
+void generateCubeEdgePointCloud6 (PointCloudNormal &points, PointCloudNormal &edges)
+{
+  Eigen::Vector3f e1_start(0, 0, 0);
+  Eigen::Vector3f e1_end(0, 0, 0.1);
+  Eigen::Vector3f e2_start(0.1, 0, -0.1);
+  Eigen::Vector3f e2_end(0.1, 0.2, 0);
+  Eigen::Vector3f e3_start(0, 0.1, 0);
+  Eigen::Vector3f e3_end(-0.1, 0.1, 0.2);
+
+  // store points
+  addEdgePoints (points, e1_start, e1_end, 10);
+  addEdgePoints (points, e2_start, e2_end, 20);
+  addEdgePoints (points, e3_start, e3_end, 10);
+  points.width = (int) points.points.size ();
+  points.height = 1;
+
+  // store edges
+  addEdgeLine (edges, e1_start, e1_end, 10, -2.5, 3.0);
+  addEdgeLine (edges, e2_start, e2_end, 20, -2.0, 2.5);
+  addEdgeLine (edges, e3_start, e3_end, 10, -2.0, 3.0);
   edges.width = (int) edges.points.size ();
   edges.height = 1;
 }
@@ -193,6 +317,14 @@ int main (int argc, char **argv)
       generateCubeEdgePointCloud1 (*object_line, *object_model_line);
     } else if (input_pcd_file == "edge2") {
       generateCubeEdgePointCloud2 (*object_line, *object_model_line);
+    } else if (input_pcd_file == "edge3") {
+      generateCubeEdgePointCloud3 (*object_line, *object_model_line);
+    } else if (input_pcd_file == "edge4") {
+      generateCubeEdgePointCloud4 (*object_line, *object_model_line);
+    } else if (input_pcd_file == "edge5") {
+      generateCubeEdgePointCloud5 (*object_line, *object_model_line);
+    } else if (input_pcd_file == "edge6") {
+      generateCubeEdgePointCloud6 (*object_line, *object_model_line);
     } else {
       pcl::console::print_info ("invalid edge name: %s\n", input_pcd_file.c_str());
     }
