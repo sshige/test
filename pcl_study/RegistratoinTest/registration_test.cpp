@@ -67,16 +67,11 @@ void addEdgePoints (PointCloudNormal &cloud, const Eigen::Vector3f p_start, cons
  */
 void addEdgeLine (PointCloudNormal &cloud, const Eigen::Vector3f p_start, const Eigen::Vector3f p_end, const int np)
 {
-  Eigen::Vector3f p_mid_vec(p_start);
-  // Eigen::Vector3f p_mid_vec((p_start + p_end) * 0.5);
   Eigen::Vector3f d_vec((p_end - p_start));
   PointNormal p;
-  p.x = p_mid_vec(0);
-  p.y = p_mid_vec(1);
-  p.z = p_mid_vec(2);
-  p.x = 0;
-  p.y = 0;
-  p.z = 0;
+  p.x = p_start(0);
+  p.y = p_start(1);
+  p.z = p_start(2);
   p.normal_x = d_vec(0);
   p.normal_y = d_vec(1);
   p.normal_z = d_vec(2);
@@ -85,24 +80,53 @@ void addEdgeLine (PointCloudNormal &cloud, const Eigen::Vector3f p_start, const 
   }
 }
 
-void generateCubeEdgePointCloud (PointCloudNormal &cloud)
+
+void generateCubeEdgePointCloud1 (PointCloudNormal &points, PointCloudNormal &edges)
 {
-  // generate object pointcloud
-  addEdgePoints (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.1, 0, 0), 10);
-  addEdgePoints (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.0, 0.1, 0), 20);
-  addEdgePoints (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.0, 0.0, 0.2), 10);
-  cloud.width = (int) cloud.points.size ();
-  cloud.height = 1;
+  Eigen::Vector3f e1_start(0, 0, 0);
+  Eigen::Vector3f e1_end(0.1, 0, 0);
+  Eigen::Vector3f e2_start(0, 0, 0);
+  Eigen::Vector3f e2_end(0, 0.1, 0);
+  Eigen::Vector3f e3_start(0, 0, 0);
+  Eigen::Vector3f e3_end(0, 0, 0.2);
+
+  // store points
+  addEdgePoints (points, e1_start, e1_end, 10);
+  addEdgePoints (points, e2_start, e2_end, 20);
+  addEdgePoints (points, e3_start, e3_end, 10);
+  points.width = (int) points.points.size ();
+  points.height = 1;
+
+  // store edges
+  addEdgeLine (edges, e1_start, e1_end, 10);
+  addEdgeLine (edges, e2_start, e2_end, 20);
+  addEdgeLine (edges, e3_start, e3_end, 10);
+  edges.width = (int) edges.points.size ();
+  edges.height = 1;
 }
 
-void generateCubeEdgeLines (PointCloudNormal &cloud)
+void generateCubeEdgePointCloud2 (PointCloudNormal &points, PointCloudNormal &edges)
 {
-  // generate object pointcloud
-  addEdgeLine (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.1, 0, 0), 10);
-  addEdgeLine (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.0, 0.1, 0), 20);
-  addEdgeLine (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.0, 0.0, 0.2), 10);
-  cloud.width = (int) cloud.points.size ();
-  cloud.height = 1;
+  Eigen::Vector3f e1_start(0, 0, 0);
+  Eigen::Vector3f e1_end(0, 0, 0.1);
+  Eigen::Vector3f e2_start(0.1, 0, -0.1);
+  Eigen::Vector3f e2_end(0.1, 0, 0);
+  Eigen::Vector3f e3_start(0, 0.1, 0);
+  Eigen::Vector3f e3_end(0, 0.1, 0.2);
+
+  // store points
+  addEdgePoints (points, e1_start, e1_end, 10);
+  addEdgePoints (points, e2_start, e2_end, 20);
+  addEdgePoints (points, e3_start, e3_end, 10);
+  points.width = (int) points.points.size ();
+  points.height = 1;
+
+  // store edges
+  addEdgeLine (edges, e1_start, e1_end, 10);
+  addEdgeLine (edges, e2_start, e2_end, 20);
+  addEdgeLine (edges, e3_start, e3_end, 10);
+  edges.width = (int) edges.points.size ();
+  edges.height = 1;
 }
 
 
@@ -164,10 +188,14 @@ int main (int argc, char **argv)
   PointCloudXYZ::Ptr object_est_transformed (new PointCloudXYZ);
   PointCloudNormal::Ptr object_act_transformed_normal (new PointCloudNormal);
   pcl::console::print_highlight ("Loading point clouds...\n");
-  if (input_pcd_file == "") {
-    generateCubeEdgePointCloud (*object_line);
-    generateCubeEdgeLines (*object_model_line);
-    // pcl::copyPointCloud (*object_line, *object_model_line);
+  if (input_pcd_file.find("edge") != std::string::npos) {
+    if (input_pcd_file == "edge1") {
+      generateCubeEdgePointCloud1 (*object_line, *object_model_line);
+    } else if (input_pcd_file == "edge2") {
+      generateCubeEdgePointCloud2 (*object_line, *object_model_line);
+    } else {
+      pcl::console::print_info ("invalid edge name: %s\n", input_pcd_file.c_str());
+    }
     pcl::copyPointCloud (*object_line, *object);
     pcl::copyPointCloud (*object_model_line, *object_model);
   } else {
