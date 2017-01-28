@@ -17,6 +17,7 @@
 #include <pcl/registration/transformation_estimation_lm.h>
 #include <pcl/registration/transformation_estimation_point_to_plane.h>
 #include <pcl/registration/transformation_estimation_point_to_plane_lls.h>
+#include "transformation_estimation_point_to_line.h"
 
 typedef pcl::PointXYZ PointXYZ;
 typedef pcl::PointNormal PointNormal;
@@ -28,19 +29,77 @@ typedef enum {
   SVD,
   LM,
   LM_Plane,
-  LLS_Plane
+  LLS_Plane,
+  LM_Line,
 } TransformationEstimationAlgorithm;
+
+
+void addEdgePoints (PointCloudNormal &cloud, const Eigen::Vector3f p_start, const Eigen::Vector3f p_end, const int np)
+{
+  for (float i = 0.0; i <= 1.0; i += (1.0 / np)) {
+    Eigen::Vector3f p_vec(p_start + i * (p_end - p_start));
+    Eigen::Vector3f d_vec((p_end - p_start).normalized());
+    PointNormal p;
+    p.x = p_vec(0);
+    p.y = p_vec(1);
+    p.z = p_vec(2);
+    p.normal_x = d_vec(0);
+    p.normal_y = d_vec(1);
+    p.normal_z = d_vec(2);
+    cloud.points.push_back(p);
+  }
+}
+
+void addEdgeLine (PointCloudNormal &cloud, const Eigen::Vector3f p_start, const Eigen::Vector3f p_end, const int np)
+{
+  Eigen::Vector3f p_mid_vec(p_start);
+  // Eigen::Vector3f p_mid_vec((p_start + p_end) * 0.5);
+  Eigen::Vector3f d_vec((p_end - p_start).normalized());
+  PointNormal p;
+  p.x = p_mid_vec(0);
+  p.y = p_mid_vec(1);
+  p.z = p_mid_vec(2);
+  p.x = 0;
+  p.y = 0;
+  p.z = 0;
+  p.normal_x = d_vec(0);
+  p.normal_y = d_vec(1);
+  p.normal_z = d_vec(2);
+  for (float i = 0.0; i <= 1.0; i += (1.0 / np)) {
+    cloud.points.push_back(p);
+  }
+}
+
+void generateCubeEdgePointCloud (PointCloudNormal &cloud)
+{
+  // generate object pointcloud
+  addEdgePoints (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.1, 0, 0), 10);
+  addEdgePoints (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.0, 0.1, 0), 20);
+  addEdgePoints (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.0, 0.0, 0.2), 10);
+  cloud.width = (int) cloud.points.size ();
+  cloud.height = 1;
+}
+
+void generateCubeEdgeLines (PointCloudNormal &cloud)
+{
+  // generate object pointcloud
+  addEdgeLine (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.1, 0, 0), 10);
+  addEdgeLine (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.0, 0.1, 0), 20);
+  addEdgeLine (cloud, Eigen::Vector3f(0, 0, 0), Eigen::Vector3f(0.0, 0.0, 0.2), 10);
+  cloud.width = (int) cloud.points.size ();
+  cloud.height = 1;
+}
 
 
 int main (int argc, char **argv)
 {
   // check argument
-  std::string input_pcd_file = "../pcd/chef.pcd";
+  std::string input_pcd_file = "";
   TransformationEstimationAlgorithm alg = SVD;
-  double delta_x = 0.5, delta_yaw = 1.0;
+  double delta_x = 0, delta_y = 0, delta_z = 0, delta_roll = 0, delta_pitch = 0, delta_yaw = 0;
   int opt;
   opterr = 0;
-  while ((opt = getopt(argc, argv, "i:a:t:r:")) != -1) {
+  while ((opt = getopt(argc, argv, "i:a:x:y:z:R:P:Y:")) != -1) {
     std::string optarg_string = optarg;
     switch (opt) {
     case 'i':
@@ -55,12 +114,26 @@ int main (int argc, char **argv)
         alg = LM_Plane;
       } else if (optarg_string == "lls_plane" || optarg_string == "LLS_Plane" || optarg_string == "LLS_PLANE") {
         alg = LLS_Plane;
+      } else if (optarg_string == "lm_line" || optarg_string == "LM_Line" || optarg_string == "LM_LINE") {
+        alg = LM_Line;
       }
       break;
-    case 't':
+    case 'x':
       delta_x = atof(optarg);
       break;
-    case 'r':
+    case 'y':
+      delta_y = atof(optarg);
+      break;
+    case 'z':
+      delta_z = atof(optarg);
+      break;
+    case 'R':
+      delta_roll = atof(optarg);
+      break;
+    case 'P':
+      delta_pitch = atof(optarg);
+      break;
+    case 'Y':
       delta_yaw = atof(optarg);
       break;
     }
@@ -69,23 +142,37 @@ int main (int argc, char **argv)
   // load point cloud
   PointCloudXYZ::Ptr object_raw (new PointCloudXYZ);
   PointCloudXYZ::Ptr object (new PointCloudXYZ);
+  PointCloudNormal::Ptr object_line (new PointCloudNormal);
+  PointCloudXYZ::Ptr object_model (new PointCloudXYZ);
+  PointCloudNormal::Ptr object_model_line (new PointCloudNormal);
   PointCloudXYZ::Ptr object_act_transformed (new PointCloudXYZ);
   PointCloudXYZ::Ptr object_est_transformed (new PointCloudXYZ);
   PointCloudNormal::Ptr object_act_transformed_normal (new PointCloudNormal);
   pcl::console::print_highlight ("Loading point clouds...\n");
-  if (pcl::io::loadPCDFile<PointXYZ> (input_pcd_file, *object_raw) < 0) {
-    pcl::console::print_error ("Error loading object/scene file!\n");
-    return 1;
+  if (input_pcd_file == "") {
+    generateCubeEdgePointCloud (*object_line);
+    generateCubeEdgeLines (*object_model_line);
+    // pcl::copyPointCloud (*object_line, *object_model_line);
+    pcl::copyPointCloud (*object_line, *object);
+    pcl::copyPointCloud (*object_model_line, *object_model);
   } else {
-    pcl::console::print_info ("PCD file: %s\n", input_pcd_file.c_str());
+    if (pcl::io::loadPCDFile<PointXYZ> (input_pcd_file, *object_raw) < 0) {
+      pcl::console::print_error ("Error loading object/scene file!\n");
+      return 1;
+    } else {
+      pcl::console::print_info ("PCD file: %s\n", input_pcd_file.c_str());
+    }
+    std::vector<int> remove_nan_indices;
+    pcl::removeNaNFromPointCloud(*object_raw, *object, remove_nan_indices);
+    pcl::copyPointCloud (*object, *object_model);
   }
-  std::vector<int> remove_nan_indices;
-  pcl::removeNaNFromPointCloud(*object_raw, *object, remove_nan_indices);
 
   // transform pointcloud with actual transformation
   Eigen::Affine3f act_trans = Eigen::Affine3f::Identity();
   Eigen::Affine3f est_trans;
-  act_trans.translation () << delta_x, 0.0, 0.0;
+  act_trans.translation () << delta_x, delta_y, delta_z;
+  act_trans.rotate (Eigen::AngleAxisf (delta_roll, Eigen::Vector3f::UnitX()));
+  act_trans.rotate (Eigen::AngleAxisf (delta_pitch, Eigen::Vector3f::UnitY()));
   act_trans.rotate (Eigen::AngleAxisf (delta_yaw, Eigen::Vector3f::UnitZ()));
   pcl::transformPointCloud (*object, *object_act_transformed, act_trans);
 
@@ -121,14 +208,21 @@ int main (int argc, char **argv)
     pcl::console::print_info ("Algorithm: LLS_Plane\n");
     est_normal.reset ( new pcl::registration::TransformationEstimationPointToPlaneLLS < PointXYZ, PointNormal > () );
     break;
+  case LM_Line:
+    pcl::console::print_info ("Algorithm: LM_Line\n");
+    est_normal.reset ( new pcl::registration::TransformationEstimationPointToLine < PointXYZ, PointNormal > () );
+    break;
   default:
     pcl::console::print_error ("Invalid algorithm for estimating transformation!\n");
     return 1;
   }
   if (alg == LM_Plane || alg == LLS_Plane) {
-    est_normal->estimateRigidTransformation(*object, *object_act_transformed_normal, est_trans.matrix());
+    est_normal->estimateRigidTransformation(*object_model, *object_act_transformed_normal, est_trans.matrix());
+  } else if (alg == LM_Line) {
+    est_normal->estimateRigidTransformation(*object_act_transformed, *object_model_line, est_trans.matrix());
+    est_trans = est_trans.inverse(); // inverse transformation because src and dest is flipped in estimation
   } else {
-    est->estimateRigidTransformation(*object, *object_act_transformed, est_trans.matrix());
+    est->estimateRigidTransformation(*object_model, *object_act_transformed, est_trans.matrix());
   }
   clock_t end_clock = clock();
   double elapsed_time = double(end_clock - begin_clock) / CLOCKS_PER_SEC;
@@ -164,7 +258,7 @@ int main (int argc, char **argv)
   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
   viewer->setBackgroundColor (0, 0, 0);
   pcl::visualization::PointCloudColorHandlerCustom<PointXYZ> rgb_object (object, 255, 0, 0);
-  viewer->addPointCloud<PointXYZ> (object, rgb_object, "object");
+  viewer->addPointCloud<PointXYZ> (object_model, rgb_object, "object");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "object");
   pcl::visualization::PointCloudColorHandlerCustom<PointXYZ> rgb_object_act_transformed (object_act_transformed, 0, 255, 0);
   viewer->addPointCloud<PointXYZ> (object_act_transformed, rgb_object_act_transformed, "object_act_transformed");
@@ -174,6 +268,8 @@ int main (int argc, char **argv)
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "object_est_transformed");
   if (alg == LM_Plane || alg == LLS_Plane) {
     viewer->addPointCloudNormals<PointXYZ, PointNormal> (object_act_transformed, object_act_transformed_normal, 10, 0.02, "object_act_transformed_normal");
+  } else if (alg == LM_Line) {
+    viewer->addPointCloudNormals<PointXYZ, PointNormal> (object_model, object_model_line, 6, 0.01, "object_line");
   }
   viewer->spin();
 
