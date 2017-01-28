@@ -91,6 +91,7 @@ int main (int argc, char **argv)
 
   // calculate norm for plane
   if (alg == LM_Plane || alg == LLS_Plane) {
+    pcl::copyPointCloud(*object_act_transformed, *object_act_transformed_normal);
     pcl::NormalEstimation< PointXYZ, PointN > ne;
     ne.setInputCloud (object_act_transformed);
     pcl::search::KdTree< PointXYZ >::Ptr tree (new pcl::search::KdTree< PointXYZ > ());
