@@ -54,7 +54,7 @@ void addEdgeLine (PointCloudNormal &cloud, const Eigen::Vector3f p_start, const 
 {
   Eigen::Vector3f p_mid_vec(p_start);
   // Eigen::Vector3f p_mid_vec((p_start + p_end) * 0.5);
-  Eigen::Vector3f d_vec((p_end - p_start).normalized());
+  Eigen::Vector3f d_vec((p_end - p_start));
   PointNormal p;
   p.x = p_mid_vec(0);
   p.y = p_mid_vec(1);
@@ -269,7 +269,7 @@ int main (int argc, char **argv)
   if (alg == LM_Plane || alg == LLS_Plane) {
     viewer->addPointCloudNormals<PointXYZ, PointNormal> (object_act_transformed, object_act_transformed_normal, 10, 0.02, "object_act_transformed_normal");
   } else if (alg == LM_Line) {
-    viewer->addPointCloudNormals<PointXYZ, PointNormal> (object_model, object_model_line, 6, 0.01, "object_line");
+    viewer->addPointCloudNormals<PointXYZ, PointNormal> (object_model, object_model_line, 6, 1.0, "object_line");
   }
   viewer->spin();
 

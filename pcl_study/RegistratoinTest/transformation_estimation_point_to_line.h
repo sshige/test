@@ -70,6 +70,7 @@ namespace pcl
         typedef PointIndices::Ptr PointIndicesPtr;
         typedef PointIndices::ConstPtr PointIndicesConstPtr;
 
+        typedef Eigen::Matrix<Scalar, 3, 1> Vector3;
         typedef Eigen::Matrix<Scalar, 4, 1> Vector4;
 
         TransformationEstimationPointToLine () {};
@@ -80,25 +81,34 @@ namespace pcl
         computeDistance (const PointSource &p_src, const PointTarget &p_tgt) const
         {
           // Compute the point-to-line distance
-          Vector4 s (p_src.x, p_src.y, p_src.z, 0);
-          Vector4 t (p_tgt.x, p_tgt.y, p_tgt.z, 0);
-          Vector4 d (p_tgt.normal_x, p_tgt.normal_y, p_tgt.normal_z, 0);
-          Vector4 e (s - t);
-          double dist_parallel = fabs(d.transpose () * e);
-          double dist2 = fabs(e.transpose () * e - dist_parallel * dist_parallel);
-          return pow(dist2, 0.5);
+          Vector4 p_src_vec (p_src.x, p_src.y, p_src.z, 0);
+          return computeDistance (p_src_vec, p_tgt);
         }
 
         virtual Scalar
         computeDistance (const Vector4 &p_src, const PointTarget &p_tgt) const
         {
+          bool consider_edge_length = true;
+
           // Compute the point-to-line distance
-          Vector4 t (p_tgt.x, p_tgt.y, p_tgt.z, 0);
-          Vector4 d (p_tgt.normal_x, p_tgt.normal_y, p_tgt.normal_z, 0);
-          Vector4 e (p_src - t);
-          double dist_parallel = fabs(d.transpose () * e);
-          double dist2 = fabs(e.transpose () * e - dist_parallel * dist_parallel);
-          return pow(dist2, 0.5);
+          Vector3 dir (p_tgt.normal_x, p_tgt.normal_y, p_tgt.normal_z);
+          Vector3 p_start (p_tgt.x, p_tgt.y, p_tgt.z);
+          Vector3 p_end (p_start + dir);
+          double l = dir.norm();
+          Vector3 q (p_src(0), p_src(1), p_src(2));
+
+          Vector3 e (q - p_start);
+          dir.normalize();
+          double foot_dist = dir.transpose () * e;
+          double dist;
+          if (consider_edge_length && foot_dist < 0) {
+            dist = (p_start - q).norm();
+          } else if (consider_edge_length && foot_dist > l) {
+            dist = (p_end - q).norm();
+          } else {
+            dist = pow(fabs(e.transpose () * e - foot_dist * foot_dist), 0.5);
+          }
+          return dist;
         }
 
     };
