@@ -95,7 +95,7 @@ int main (int argc, char **argv)
     ne.setInputCloud (object_act_transformed);
     pcl::search::KdTree< PointXYZ >::Ptr tree (new pcl::search::KdTree< PointXYZ > ());
     ne.setSearchMethod (tree);
-    ne.setRadiusSearch (0.03);
+    ne.setRadiusSearch (0.02);
     ne.compute (*object_act_transformed_normal);
   }
 
@@ -161,15 +161,19 @@ int main (int argc, char **argv)
 
   // view point cloud
   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> rgb_object (object, 255, 0, 0);
-  viewer->addPointCloud<pcl::PointXYZ> (object, rgb_object, "object");
+  viewer->setBackgroundColor (0, 0, 0);
+  pcl::visualization::PointCloudColorHandlerCustom<PointXYZ> rgb_object (object, 255, 0, 0);
+  viewer->addPointCloud<PointXYZ> (object, rgb_object, "object");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "object");
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> rgb_object_act_transformed (object_act_transformed, 0, 255, 0);
-  viewer->addPointCloud<pcl::PointXYZ> (object_act_transformed, rgb_object_act_transformed, "object_act_transformed");
+  pcl::visualization::PointCloudColorHandlerCustom<PointXYZ> rgb_object_act_transformed (object_act_transformed, 0, 255, 0);
+  viewer->addPointCloud<PointXYZ> (object_act_transformed, rgb_object_act_transformed, "object_act_transformed");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "object_act_transformed");
-  pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> rgb_object_est_transformed (object_est_transformed, 0, 0, 255);
-  viewer->addPointCloud<pcl::PointXYZ> (object_est_transformed, rgb_object_est_transformed, "object_est_transformed");
+  pcl::visualization::PointCloudColorHandlerCustom<PointXYZ> rgb_object_est_transformed (object_est_transformed, 0, 0, 255);
+  viewer->addPointCloud<PointXYZ> (object_est_transformed, rgb_object_est_transformed, "object_est_transformed");
   viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "object_est_transformed");
+  if (alg == LM_Plane || alg == LLS_Plane) {
+    viewer->addPointCloudNormals<PointXYZ, PointN> (object_act_transformed, object_act_transformed_normal, 10, 0.02, "object_act_transformed_normal");
+  }
   viewer->spin();
 
   return 0;
