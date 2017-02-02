@@ -445,6 +445,7 @@ int main (int argc, char **argv)
     viewer->addPointCloudNormals<PointXYZ, PointNormal> (object_act_transformed, object_act_transformed_normal, 10, 0.02, "object_act_transformed_normal");
   } else if (alg == LM_Line) {
     viewer->addPointCloudNormals<PointXYZ, PointNormal> (object_model, object_model_line, 6, 1.0, "object_line");
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 1, 1, 0, "object_line");
   }
   viewer->spin();
 
