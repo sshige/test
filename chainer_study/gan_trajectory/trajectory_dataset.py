@@ -7,7 +7,7 @@ class TrajectoryDataset(chainer.dataset.DatasetMixin):
 # y = a sin(b x + c) + d
 
     def __init__(self,
-                 n_data=1000, data_length=20,
+                 n_data=100000, data_length=20,
                  input_start=0., input_end=2*np.pi,
              ):
         self.n_data = n_data
@@ -29,7 +29,7 @@ class TrajectoryDataset(chainer.dataset.DatasetMixin):
         c = self.c_array[i]
         d = self.d_array[i]
         y = a * np.sin(b * x + c) + d
-        return y
+        return y.astype(np.float32)
 
     def visualize_example(self, i):
         x = np.linspace(self.input_start, self.input_end, self.data_length)
