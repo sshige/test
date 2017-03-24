@@ -92,7 +92,7 @@ def main():
     trainer.extend(
         out_generated_image(
             gen, dis, train,
-            20, args.seed, args.out),
+            10, args.seed, args.out),
         trigger=visualize_interval)
 
     if args.resume:

@@ -10,7 +10,7 @@ import chainer.functions as F
 import chainer.links as L
 
 
-def add_noise(h, test, sigma=0.1):
+def add_noise(h, test, sigma=0.01):
     xp = cuda.get_array_module(h.data)
     if test:
         return h
@@ -44,7 +44,8 @@ class Generator(chainer.Chain):
         h = F.relu(self.bn1(self.dc1(h), test=test))
         h = F.relu(self.bn2(self.dc2(h), test=test))
         h = F.relu(self.bn3(self.dc3(h), test=test))
-        x = F.sigmoid(self.dc4(h))
+        # x = F.sigmoid(self.dc4(h))
+        x = self.dc4(h)
         return x
 
 
