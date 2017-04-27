@@ -5,15 +5,15 @@ import cupy
 import time
 
 def test(use_cupy = False):
-    mat_size = 3000
+    mat_size = 10000
     if use_cupy:
-        rand_mat = cupy.array([[numpy.random.rand() for i in range(mat_size)] for j in range(mat_size)], dtype=numpy.float32)
+        rand_mat = cupy.random.randn(mat_size, mat_size)
         ret = cupy.identity(mat_size)
     else:
-        rand_mat = numpy.array([[numpy.random.rand() for i in range(mat_size)] for j in range(mat_size)], dtype=numpy.float32)
+        rand_mat = numpy.random.randn(mat_size, mat_size)
         ret = numpy.identity(mat_size)
     start = time.time()
-    for i in range(10):
+    for i in range(2):
         ret = ret.dot(rand_mat)
     elapsed_time = time.time() - start
     print ("elapsed_time:{0}".format(elapsed_time)) + "[sec]"
