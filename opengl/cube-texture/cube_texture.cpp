@@ -63,6 +63,8 @@ void displayFunc(void)
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     gluBuild2DMipmaps(GL_TEXTURE_2D, 3, frame.cols, frame.rows, GL_RGB, GL_UNSIGNED_BYTE, frame.data);
+
+    frame.release();
   }
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -86,14 +88,14 @@ void displayFunc(void)
   // キューブの頂点を描画
   int texture_face_id = 0;
   glEnable(GL_TEXTURE_2D);
-  glBegin( GL_QUADS );
+  glBegin(GL_QUADS);
   for (size_t i = 0; i < 2; ++i) {
     glNormal3dv( aCubeNormal[i] );// 法線ベクトルをキューブに当てる。
     for (size_t j = 0; j < 4; ++j) {
       if (i == texture_face_id) {
-        glTexCoord2dv( aTextureVertex[j] );
+        glTexCoord2dv(aTextureVertex[j]);
       }
-      glVertex3dv( aCubeVertex[ aCubeFace[i][j] ] );
+      glVertex3dv(aCubeVertex[aCubeFace[i][j]]);
     }
   }
   glEnd();
