@@ -10,7 +10,7 @@ GLuint texture[1];
 int window_id;
 cv::VideoCapture cap;
 
-// キューブの頂点情報。
+// キューブの頂点情報
 static const GLdouble aCubeVertex[][3] = {
   { -20.0, -20.0, -20.0 },
   { 20.0, -20.0, -20.0 },
@@ -21,7 +21,8 @@ static const GLdouble aCubeVertex[][3] = {
   { 20.0, 20.0, 20.0 },
   { -20.0, 20.0, 20.0 }
 };
-// キューブの面。
+
+// キューブの面
 static const int aCubeFace[][4] = {
   { 0, 1, 2, 3 },
   { 1, 5, 6, 2 },
@@ -30,21 +31,12 @@ static const int aCubeFace[][4] = {
   { 4, 5, 1, 0 },
   { 3, 2, 6, 7 }
 };
-// キューブに対する法線ベクトル。
-static const GLdouble aCubeNormal[][3] = {
-  { 0.0, 0.0,-1.0 },
-  {-1.0, 0.0, 0.0 },
-  { 0.0, 0.0,-1.0 },
-  { 1.0, 0.0, 0.0 },
-  { 0.0, 1.0, 0.0 },
-  { 0.0,-1.0, 0.0 }
-};
 
 static const GLdouble aTextureVertex[][2] = {
-  {0.0, 1.0},
-  {0.0, 0.0},
-  {1.0, 0.0},
-  {1.0, 1.0}
+   {0.0, 1.0},
+   {0.0, 0.0},
+   {1.0, 0.0},
+   {1.0, 1.0}
 };
 
 void displayFunc(void)
@@ -58,7 +50,6 @@ void displayFunc(void)
     cv::cvtColor(frame, frame, CV_BGR2RGB); // for opengl
 
     // generate texture
-    glGenTextures(1, &texture[0]);
     glBindTexture(GL_TEXTURE_2D, texture[0]);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
@@ -89,12 +80,9 @@ void displayFunc(void)
   int texture_face_id = 0;
   glEnable(GL_TEXTURE_2D);
   glBegin(GL_QUADS);
-  for (size_t i = 0; i < 2; ++i) {
-    glNormal3dv( aCubeNormal[i] );// 法線ベクトルをキューブに当てる。
+  for (size_t i = 0; i < 6; ++i) {
     for (size_t j = 0; j < 4; ++j) {
-      if (i == texture_face_id) {
-        glTexCoord2dv(aTextureVertex[j]);
-      }
+      glTexCoord2dv(aTextureVertex[j]);
       glVertex3dv(aCubeVertex[aCubeFace[i][j]]);
     }
   }
@@ -119,10 +107,10 @@ void idleFunc(void)
 }
 
 void Init(){
-  glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+  glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
   glEnable(GL_DEPTH_TEST);
-  glEnable(GL_LIGHTING);
-  glEnable(GL_LIGHT0);
+  // glEnable(GL_LIGHTING);
+  // glEnable(GL_LIGHT0);
 }
 
 int main(int argc, char *argv[])
@@ -130,7 +118,14 @@ int main(int argc, char *argv[])
   glutInitWindowPosition(100, 100);
   glutInitWindowSize(WIDTH, HEIGHT);
   glutInit(&argc, argv);
-  glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
+
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+  glCullFace(GL_FRONT);
+
+  glGenTextures(1, &texture[0]);
+
+  glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
   window_id = glutCreateWindow("cube_texture window");
 
   cap.open(0); //デバイスのオープン
