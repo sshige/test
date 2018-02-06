@@ -4,14 +4,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def visualize_contour(colormesh=False, cmap='jet'):
-    x = np.arange(0, 10, 0.05) # x range
-    y = np.arange(0, 10, 0.05) # y range
-
-    X, Y = np.meshgrid(x, y)
-    Z = np.sin(X) + np.cos(Y)   # target function
+def visualize_contour_2d(
+        x_range=np.arange(-10, 10, 0.05),
+        y_range=np.arange(-10, 10, 0.05),
+        func_2d=(lambda x,y: np.sin(x) + np.cos(y)),
+        colormesh=False,
+        cmap='jet'):
+    X, Y = np.meshgrid(x_range, y_range)
+    Z = func_2d(X, Y)
 
     # graph
+    plt.clf()
     if colormesh == True:
         plt.pcolormesh(X, Y, Z, cmap=cmap)
     else:
