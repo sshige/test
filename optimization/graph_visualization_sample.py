@@ -7,8 +7,8 @@ from scipy.optimize import approx_fprime
 
 
 def visualize_contour_2d(
-        x_range=np.arange(-10, 10, 0.05),
-        y_range=np.arange(-10, 10, 0.05),
+        x_range=np.arange(-5, 5, 0.05),
+        y_range=np.arange(-5, 5, 0.05),
         func_2d=(lambda x: np.sin(x[0]) + np.cos(x[1])),
         colormesh=False,
         cmap='jet',
@@ -48,6 +48,9 @@ def optimize_grad_2d(
         x_new = x_current + delta_x_update
         # check convergence
         if np.linalg.norm(grad) < grad_thre:
+            print(grad)
+            print(np.linalg.norm(grad))
+            print(grad_thre)
             print("detected convergence !")
             break
         # print
@@ -59,6 +62,7 @@ grad= [{2[0]:.3f}, {2[1]:.3f}]".format(
         plt.quiver(x_current[0], x_current[1], delta_x_update[0], delta_x_update[1],
                    angles='xy',scale_units='xy',scale=1, zorder=2)
         if iteration_count%10 == 0:
+            plt.legend(loc='lower left')
             plt.pause(0.01)
         # update
         x_current = x_new
