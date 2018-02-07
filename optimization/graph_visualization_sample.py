@@ -48,9 +48,6 @@ def optimize_grad_2d(
         x_new = x_current + delta_x_update
         # check convergence
         if np.linalg.norm(grad) < grad_thre:
-            print(grad)
-            print(np.linalg.norm(grad))
-            print(grad_thre)
             print("detected convergence !")
             break
         # print
