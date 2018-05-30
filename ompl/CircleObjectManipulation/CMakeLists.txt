@@ -30,3 +30,4 @@ macro(add_ompl_demo demo_name)
 endmacro(add_ompl_demo)
 
 add_ompl_demo(demo_CircleObjectManipulation CircleObjectManipulation.cpp)
+add_ompl_demo(demo_CircleObjectPath CircleObjectPath.cpp)
