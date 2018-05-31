@@ -29,5 +29,6 @@ macro(add_ompl_demo demo_name)
     ${Boost_PROGRAM_OPTIONS_LIBRARY})
 endmacro(add_ompl_demo)
 
-add_ompl_demo(demo_CircleObjectManipulation CircleObjectManipulation.cpp)
 add_ompl_demo(demo_CircleObjectPath CircleObjectPath.cpp)
+add_ompl_demo(demo_CircleObjectManipulation CircleObjectManipulation.cpp)
+add_ompl_demo(demo_CircleObjectManipulationWithControl CircleObjectManipulationWithControl.cpp)
