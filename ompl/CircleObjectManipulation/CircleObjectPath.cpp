@@ -117,8 +117,10 @@ void plan()
         // print the path to screen
         ss.simplifySolution();
 
-        // ss.getSolutionPath().print(std::cout);
-        ss.getSolutionPath().printAsMatrix(std::cout);
+        og::PathGeometric& path(ss.getSolutionPath());
+        path.interpolate();
+        // path.print(std::cout);
+        path.printAsMatrix(std::cout);
 
         std::string filename = "/tmp/ompl_path.txt";
         std::ofstream file_stream;

@@ -194,10 +194,8 @@ void plan()
     // attempt to solve the problem within the specified planning time
     ob::PlannerStatus solved = ss.solve(10.0);
 
-    if (solved)
-    {
+    if (solved) {
         std::cout << "Found solution:" << std::endl;
-        // print the path to screen
         ss.simplifySolution();
 
         // ss.getSolutionPath().print(std::cout);
@@ -210,6 +208,7 @@ void plan()
         std::cout << "Saved the path to " << filename << std::endl;
 
         og::PathGeometric& path(ss.getSolutionPath());
+        // path.interpolate();
         for(unsigned int i=0; i<path.getStateCount(); ++i) {
             // get each element state value
             const ob::State* state = path.getState(i);
