@@ -1,5 +1,5 @@
 # set term gif animate optimize delay 2 size 480,360
-set output 'movie2.gif'
+# set output './path-movie.gif'
 
 set xr [-2:2]
 set yr [-1.5:1.5]

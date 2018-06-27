@@ -63,10 +63,10 @@ bool checkIKonCircleTrajectory(double* theta)
 
   double norm = sqrt((F_init.p[0] - 0.5) * (F_init.p[0] - 0.5) + F_init.p[1] * F_init.p[1]);
 
-  std::cout << "=== FK test ===" << std::endl;
-  std::cout << "q_init: " << q_init << std::endl;
-  std::cout << "F_init: " << std::endl << F_init << std::endl;
-  std::cout << "norm: " << norm << std::endl;
+  // std::cout << "=== FK test ===" << std::endl;
+  // std::cout << "q_init: " << q_init << std::endl;
+  // std::cout << "F_init: " << std::endl << F_init << std::endl;
+  // std::cout << "norm: " << norm << std::endl;
 
   return (fabs(norm - 0.5) < 0.1);
 }
@@ -196,8 +196,8 @@ void plan()
     ss.setPlanner(planner);
 
     // this call is optional, but we put it in to get more output information
-    //ss.setup();
-    //ss.print();
+    // ss.setup();
+    ss.print();
 
     // attempt to solve the problem within one second of planning time
     ob::PlannerStatus solved = ss.solve(1.0);
