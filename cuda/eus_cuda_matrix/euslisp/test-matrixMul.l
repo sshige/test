@@ -51,21 +51,21 @@
           (make-array (list row-a col-a) :element-type :float :initial-element 1.5))
          (mat-b
           (make-array (list col-a col-b) :element-type :float :initial-element -pi/2))
-         (gpu-result
+         (cuda-result
           (make-array (list row-a col-b) :element-type :float))
          (eus-result
           (make-array (list row-a col-b) :element-type :float))
          (max-error)
          )
-    (warning-message 2 "gpu:~%")
+    (warning-message 2 "cuda:~%")
     (bench
-     (_call-matrixMultiply row-a col-a col-b (mat-a . entity) (mat-b . entity) (gpu-result . entity)))
+     (_call-matrixMultiply row-a col-a col-b (mat-a . entity) (mat-b . entity) (cuda-result . entity)))
 
     (warning-message 2 "eus:~%")
     (bench
      (m* mat-a mat-b eus-result))
 
-    (setq max-error (apply #'max (map cons #'abs (array-entity (m- gpu-result eus-result)))))
+    (setq max-error (apply #'max (map cons #'abs (array-entity (m- cuda-result eus-result)))))
     (warning-message 2 "error = ~a~%" max-error)
 
     nil
