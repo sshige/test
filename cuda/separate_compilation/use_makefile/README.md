@@ -7,4 +7,5 @@ https://devblogs.nvidia.com/separate-compilation-linking-cuda-device-code/
 
 ```
 make
+./app
 ```
