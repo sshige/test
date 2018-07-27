@@ -1,6 +1,7 @@
 ## Document
-copy matrixMul.cu in
+matrixMul.cu in
 https://github.com/NVIDIA/cuda-samples/tree/master/Samples/matrixMul
+is edited and used.
 
 ## Build
 ```
