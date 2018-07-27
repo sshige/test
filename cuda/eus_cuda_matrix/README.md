@@ -3,6 +3,8 @@ matrixMul.cu in
 https://github.com/NVIDIA/cuda-samples/tree/master/Samples/matrixMul
 is edited and used.
 
+Number of columns and rows of matrix should be multiples of 32.
+
 ## Build
 ```
 mkdir build
