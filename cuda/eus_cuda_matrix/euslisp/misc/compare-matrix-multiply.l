@@ -17,12 +17,41 @@
   :integer
   )
 
+;; int call_matrixMultiplyCUBLAS(int row_A, int col_A, int col_B, double *h_A, double *h_B, double *h_C);
+(defforeign _call-matrixMultiplyCUBLAS
+  *eus-cuda-matrix-library*
+  "call_matrixMultiplyCUBLAS"
+  (
+   :integer
+   :integer
+   :integer
+   :string
+   :string
+   :string
+   )
+  :integer
+  )
+
 (defun cuda-m* (a b c)
   (let ((row-a (array-dimension a 0))
         (col-a (array-dimension a 1))
         (col-b (array-dimension b 1))
         )
     (_call-matrixMultiply
+     row-a col-a col-b
+     (a . entity)
+     (b . entity)
+     (c . entity)
+     )
+    c)
+  )
+
+(defun cuda-cublas-m* (a b c)
+  (let ((row-a (array-dimension a 0))
+        (col-a (array-dimension a 1))
+        (col-b (array-dimension b 1))
+        )
+    (_call-matrixMultiplyCUBLAS
      row-a col-a col-b
      (a . entity)
      (b . entity)
@@ -68,6 +97,8 @@
           (make-array (list col-a col-b) :element-type :float :initial-element -pi/2))
          (cuda-result
           (make-array (list row-a col-b) :element-type :float))
+         (cuda-cublas-result
+          (make-array (list row-a col-b) :element-type :float))
          (cblas-result
           (make-array (list row-a col-b) :element-type :float))
          (eus-result
@@ -77,6 +108,9 @@
     (warning-message 2 "cuda:~%")
     (bench (cuda-m* a b cuda-result))
 
+    (warning-message 2 "cuda-cublas:~%")
+    (bench (cuda-cublas-m* a b cuda-cublas-result))
+
     (warning-message 2 "cblas:~%")
     (bench (cblas-m* a b cblas-result))
 
@@ -85,6 +119,8 @@
 
     (setq max-error (apply #'max (map cons #'abs (array-entity (m- cuda-result eus-result)))))
     (warning-message 2 "error between cuda and eus: ~a~%" max-error)
+    (setq max-error (apply #'max (map cons #'abs (array-entity (m- cuda-cublas-result eus-result)))))
+    (warning-message 2 "error between cuda-cublas and eus: ~a~%" max-error)
     (setq max-error (apply #'max (map cons #'abs (array-entity (m- cblas-result eus-result)))))
     (warning-message 2 "error between cblas and eus: ~a~%" max-error)
 

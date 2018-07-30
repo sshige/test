@@ -140,7 +140,7 @@ int matrixMultiply(int row_A, int col_A, int col_B, double *h_A, double *h_B, do
     cudaMalloc((void **) &d_B, mem_size_B);
     cudaMalloc((void **) &d_C, mem_size_C);
 
-    // copy host memory to device
+    // Copy host memory to device
     cudaMemcpy(d_A, h_A, mem_size_A, cudaMemcpyHostToDevice);
     cudaMemcpy(d_B, h_B, mem_size_B, cudaMemcpyHostToDevice);
 
@@ -159,6 +159,8 @@ int matrixMultiply(int row_A, int col_A, int col_B, double *h_A, double *h_B, do
     cudaFree(d_A);
     cudaFree(d_B);
     cudaFree(d_C);
+
+    printf("matrixMultiply is finished successfully.\n");
 
     return 0;
 }
