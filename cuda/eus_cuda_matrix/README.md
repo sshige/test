@@ -19,13 +19,19 @@ make
 ```
 cd build
 ./test_matrixMul
+./test_matrixMulCUBLAS
 ```
 
 ### Test (EusLisp)
 ```
-cd euslisp
+cd euslisp/test
 roseus test-matrixMul.l
 (test-matrixMul)
+```
+```
+cd euslisp/test
+roseus test-matrixMul.l "(test-matrixMul)"
+roseus test-matrixMulCUBLAS.l "(test-matrixMulCUBLAS)"
 ```
 
 ## Misc
