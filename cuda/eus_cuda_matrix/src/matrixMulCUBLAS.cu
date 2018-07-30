@@ -99,10 +99,6 @@ int matrixMultiplyCUBLAS(int row_A, int col_A, int col_B, double *h_A, double *h
     cudaMemcpy(d_A, h_A, mem_size_A, cudaMemcpyHostToDevice);
     cudaMemcpy(d_B, h_B, mem_size_B, cudaMemcpyHostToDevice);
 
-    // Setup execution parameters
-    dim3 threads(block_size, block_size);
-    dim3 grid(matrix_size.uiWC / threads.x, matrix_size.uiHC / threads.y);
-
     // CUBLAS version 2.0
     const double alpha = 1.0;
     const double beta  = 0.0;
