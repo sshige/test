@@ -25,11 +25,6 @@ cd build
 ### Test (EusLisp)
 ```
 cd euslisp/test
-roseus test-matrixMul.l
-(test-matrixMul)
-```
-```
-cd euslisp/test
 roseus test-matrixMul.l "(test-matrixMul)"
 roseus test-matrixMulCUBLAS.l "(test-matrixMulCUBLAS)"
 ```
