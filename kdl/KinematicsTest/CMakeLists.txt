@@ -13,3 +13,6 @@ link_directories("/home/leus/usr/lib")
 
 add_executable(solvertest solvertest.cpp)
 target_link_libraries(solvertest orocos-kdl)
+
+add_executable(root_ik_test root_ik_test.cpp)
+target_link_libraries(root_ik_test orocos-kdl)
