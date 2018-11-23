@@ -1,20 +1,5 @@
-(defvar *eus-cuda-matrix-library*
-  (load-foreign "../../build/libeus_cuda_matrix.so"))
+(load "../eus-cuda-matrix.l")
 
-;; int call_matrixMultiplyCUBLAS(int row_A, int col_A, int col_B, double *h_A, double *h_B, double *h_C);
-(defforeign _call-matrixMultiplyCUBLAS
-  *eus-cuda-matrix-library*
-  "call_matrixMultiplyCUBLAS"
-  (
-   :integer
-   :integer
-   :integer
-   :string
-   :string
-   :string
-   )
-  :integer
-  )
 
 (defun test-matrixMulCUBLAS
   ()
