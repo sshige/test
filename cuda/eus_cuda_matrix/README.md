@@ -31,10 +31,22 @@ roseus test-matrixMulCUBLAS.l "(test-matrixMulCUBLAS)"
 
 ## Misc
 
-### Compare matrix multiplication (cuda, cblas, EusLisp)
+### Compare accuracy of matrix multiplication (cuda, cblas, openblass, EusLisp)
 ```
 cd euslisp/misc
 roseus compare-matrix-multiply.l
-(compare-matrix-multiply) ;; cuda is slow only for the first time
-(compare-matrix-multiply)
+(compare-matrix-multiply-accuracy) ;; cuda is slow only for the first time
+(compare-matrix-multiply-accuracy)
 ```
+
+### Compare computation time of matrix multiplication (cuda, cblas, openblass)
+```
+cd euslisp/misc
+roseus compare-matrix-multiply.l
+(compare-matrix-multiply-time)
+;; if you want to see the graph again, do the following command after exiting euslisp
+;; gnuplot plot-compare-matrix-multiply-time.plt
+```
+Result of `(compare-matrix-multiply-time)` with Z640 (CPU is Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz, 48 threads. GPU is GeForce GTX TITAN).
+
+![euslisp/misc/plot-compare-matrix-multiply-time.png](euslisp/misc/plot-compare-matrix-multiply-time.png)
