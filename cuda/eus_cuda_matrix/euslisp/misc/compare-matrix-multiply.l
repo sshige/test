@@ -64,7 +64,13 @@
   )
 
 
+;; for backward compatibility
 (defun compare-matrix-multiply
+  ()
+  (compare-matrix-multiply-accuracy)
+  )
+
+(defun compare-matrix-multiply-accuracy
   ()
   (let* ((row-a 320)
          (col-a 1280)
@@ -111,4 +117,47 @@
 
     nil
     ))
-(warn "(compare-matrix-multiply)~%")
+(warn "(compare-matrix-multiply-accuracy)~%")
+
+(defun compare-matrix-multiply-time
+  (&key
+   (filename "/tmp/compare-matrix-multiply-time.dat")
+   )
+  (let* ((row-a 320)
+         (col-a 1280)
+         (col-b 2560)
+         )
+    (with-open-file
+     (f filename :direction :output :if-exists :new-version :if-does-not-exist :create)
+     (format f "# row-a cuda cuda-cublas cblas openblas~%")
+     (dotimes (i 8)
+       (let* ((a
+               (make-array (list row-a col-a) :element-type :float :initial-element 1.5))
+              (b
+               (make-array (list col-a col-b) :element-type :float :initial-element -pi/2))
+              (cuda-result
+               (make-array (list row-a col-b) :element-type :float))
+              (cuda-cublas-result
+               (make-array (list row-a col-b) :element-type :float))
+              (cblas-result
+               (make-array (list row-a col-b) :element-type :float))
+              (openblas-result
+               (make-array (list row-a col-b) :element-type :float))
+              cuda-time
+              cuda-cublas-time
+              cblass-time
+              openblas-time
+              )
+         (setq cuda-time (bench2 (cuda-m* a b cuda-result)))
+         (setq cuda-cublas-time (bench2 (cuda-cublas-m* a b cuda-cublas-result)))
+         (setq cblass-time (bench2 (cblas-m* a b cblas-result)))
+         (setq openblas-time (bench2 (openblas-m* a b openblas-result)))
+         (format f "~a ~a ~a ~a ~a~%"
+                 row-a cuda-time cuda-cublas-time cblass-time openblas-time)
+         )
+       (setq row-a (* 2 row-a))
+       ))
+    (unix:system "gnuplot plot-compare-matrix-multiply-time.plt")
+    nil
+    ))
+(warn "(compare-matrix-multiply-time)~%")
