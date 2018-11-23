@@ -46,6 +46,23 @@
     c)
   )
 
+(defun openblas-m* (a b c &optional (alpha 1.0) (beta 1.0))
+  (let ((major 101) ;; 101: rowmajor, 102: colmajor
+        (trans 111) ;; 111: notrans, 112: trans, 113: conjtrans
+        (m (array-dimension a 0))
+        (n (array-dimension b 1))
+        (k (array-dimension a 1))
+        )
+    (openblas_dgemm
+     major trans trans
+     m n k alpha
+     (a . entity) k
+     (b . entity) n
+     beta
+     (c . entity) n)
+    c)
+  )
+
 
 (defun compare-matrix-multiply
   ()
@@ -62,6 +79,8 @@
           (make-array (list row-a col-b) :element-type :float))
          (cblas-result
           (make-array (list row-a col-b) :element-type :float))
+         (openblas-result
+          (make-array (list row-a col-b) :element-type :float))
          (eus-result
           (make-array (list row-a col-b) :element-type :float))
          (max-error)
@@ -75,6 +94,9 @@
     (warning-message 2 "cblas:~%")
     (bench (cblas-m* a b cblas-result))
 
+    (warning-message 2 "openblas:~%")
+    (bench (openblas-m* a b openblas-result))
+
     (warning-message 2 "eus:~%")
     (bench (m* a b eus-result))
 
@@ -84,6 +106,8 @@
     (warning-message 2 "error between cuda-cublas and eus: ~a~%" max-error)
     (setq max-error (apply #'max (map cons #'abs (array-entity (m- cblas-result eus-result)))))
     (warning-message 2 "error between cblas and eus: ~a~%" max-error)
+    (setq max-error (apply #'max (map cons #'abs (array-entity (m- openblas-result eus-result)))))
+    (warning-message 2 "error between openblas and eus: ~a~%" max-error)
 
     nil
     ))
