@@ -49,5 +49,9 @@ roseus compare-matrix-multiply.l
 ```
 Result of `(compare-matrix-multiply-time)` with Z640 (CPU is Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz, 48 threads. GPU is GeForce GTX TITAN).
 
-![euslisp/misc/plot-compare-matrix-multiply-time.png](euslisp/misc/plot-compare-matrix-multiply-time.png)
-![euslisp/misc/plot-compare-matrix-multiply-time.png](euslisp/misc/plot-compare-matrix-multiply-time-2.png)
+![euslisp/misc/plot-compare-matrix-multiply-time.png](euslisp/misc/plot-compare-matrix-multiply-time-Z640.png)
+![euslisp/misc/plot-compare-matrix-multiply-time.png](euslisp/misc/plot-compare-matrix-multiply-time-Z640-2.png)
+
+Result of `(compare-matrix-multiply-time)` with P51 (CPU is Intel(R) Xeon(R) CPU E3-1535M v6 @ 3.10GHz, 8 threads. GPU is Quadro M2200).
+
+![euslisp/misc/plot-compare-matrix-multiply-time.png](euslisp/misc/plot-compare-matrix-multiply-time-P51.png)
