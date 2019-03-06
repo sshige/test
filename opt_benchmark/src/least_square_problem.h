@@ -1,5 +1,5 @@
-#ifndef __LEAST_SQUARE_PROBLEM__
-#define __LEAST_SQUARE_PROBLEM__
+#ifndef __LEAST_SQUARE_PROBLEM_H__
+#define __LEAST_SQUARE_PROBLEM_H__
 
 #include <memory>
 #include <Eigen/Dense>
@@ -26,23 +26,23 @@ public:
     MultivarScalarFunc(coeff),
     order_(order)
   {
-    assert(coeff_.rows() == order_+1);
+    assert(coeff_.size() == order_+1);
   }
 
   double operator()(const double x)
   {
-    Eigen::VectorXd poly_x(coeff_.rows());
-    for (unsigned int i = 0; i < coeff_.rows(); i++) {
-      poly_x(i) = pow(x, (double)(coeff_.rows() - (i + 1)));
+    Eigen::VectorXd poly_x(coeff_.size());
+    for (unsigned int i = 0; i < coeff_.size(); i++) {
+      poly_x(i) = pow(x, (double)(order_ - i));
     }
     return coeff_.dot(poly_x);
   }
 
   Eigen::VectorXd derivative(const double x)
   {
-    Eigen::VectorXd poly_x(coeff_.rows());
-    for (unsigned int i = 0; i < coeff_.rows(); i++) {
-      poly_x(i) = pow(x, (double)(coeff_.rows() - (i + 1)));
+    Eigen::VectorXd poly_x(coeff_.size());
+    for (unsigned int i = 0; i < coeff_.size(); i++) {
+      poly_x(i) = pow(x, (double)(order_ - i));
     }
 
     return poly_x;
@@ -68,12 +68,12 @@ public:
 
   unsigned int designVariableDim() const
   {
-    return func_ptr_->coeff_.rows();
+    return func_ptr_->coeff_.size();
   }
 
   unsigned int datasetNum() const
   {
-    return x_.rows();
+    return x_.size();
   }
 
   Eigen::VectorXd designVariable()
