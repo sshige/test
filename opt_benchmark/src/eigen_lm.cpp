@@ -1,8 +1,9 @@
 #include <iostream>
 #include <ctime>
-#include <unsupported/Eigen/NonLinearOptimization>
-#include "least_square_problem.h"
 #include <boost/program_options.hpp>
+#include <unsupported/Eigen/NonLinearOptimization>
+#include <unsupported/Eigen/NumericalDiff>
+#include "least_square_problem.h"
 
 
 using namespace Eigen;
@@ -38,14 +39,14 @@ struct LeastSquareProblemFunctor : Functor<double>
   {};
 
   // Compute the function value into fvec for the current solution var
-  int operator()(const VectorXd &var, VectorXd &fvec)
+  int operator()(const VectorXd &var, VectorXd &fvec) const
   {
     lsp_ptr_->eval(var, fvec);
     return 0;
   }
 
   // Compute the jacobian into fjac for the current solution var
-  int df(const VectorXd &var, MatrixXd &fjac)
+  int df(const VectorXd &var, MatrixXd &fjac) const
   {
     lsp_ptr_->evalJacobi(var, fjac);
     return 0;
@@ -53,6 +54,41 @@ struct LeastSquareProblemFunctor : Functor<double>
 
   LeastSquareProblemPtr lsp_ptr_;
 };
+
+
+template <typename _Functor>
+int solve(_Functor &func, const VectorXd &true_coeff)
+{
+  using namespace std;
+
+  // solve problem
+  clock_t begin = clock();
+
+  LevenbergMarquardt<_Functor> lm(func);
+  lm.parameters.ftol *= 1e-2;
+  lm.parameters.xtol *= 1e-2;
+  lm.parameters.maxfev = 2000;
+
+  VectorXd x = VectorXd::Zero(func.lsp_ptr_->designVariableDim());
+  int status = lm.minimize(x);
+
+  clock_t end = clock();
+  double optimization_time = double(end - begin) / CLOCKS_PER_SEC;
+
+  // print result
+  cout << "Optimization status:" << status << endl;
+  cout << "  - status: " << status << endl;
+  cout << "  - number of function evaluation: " << lm.nfev << endl;
+  cout << "  - number of jacobian evaluation: " << lm.njev << endl;
+
+  cout << "optimization computation time: " << optimization_time << " [sec]" << endl;
+  cout << "solution error: " << (true_coeff - x).norm() << endl;
+  // cout << "coeff error: " << true_coeff - x << endl;
+  // cout << "true coeff: " << endl << true_coeff << endl;
+  // cout << "optimal coeff: " << endl << x << endl;
+
+  return 0;
+}
 
 int main(int argc, char** argv)
 {
@@ -70,38 +106,16 @@ int main(int argc, char** argv)
   }
   cout << "derivative mode: " << mode << endl;
 
-  // 1. setup problem
+  // setup problem
   LeastSquareProblemPtr lsp_ptr;
   VectorXd true_coeff;
   initialize_sample_polynomial_lsp(lsp_ptr, true_coeff, mode);
 
-  // 2. solve problem
-  clock_t begin = clock();
-
   LeastSquareProblemFunctor func(lsp_ptr);
-  LevenbergMarquardt<LeastSquareProblemFunctor> lm(func);
-
-  lm.parameters.ftol *= 1e-2;
-  lm.parameters.xtol *= 1e-2;
-  lm.parameters.maxfev = 2000;
-
-  Eigen::VectorXd x = VectorXd::Zero(lsp_ptr->designVariableDim());
-  int status = lm.minimize(x);
-
-  clock_t end = clock();
-  double optimization_time = double(end - begin) / CLOCKS_PER_SEC;
-
-  // 3. print result
-  cout << "Optimization status:" << status << endl;
-  cout << "  - status: " << status << endl;
-  cout << "  - number of function evaluation: " << lm.nfev << endl;
-  cout << "  - number of jacobian evaluation: " << lm.njev << endl;
-
-  cout << "optimization computation time: " << optimization_time << " [sec]" << endl;
-  cout << "solution error: " << (true_coeff - x).norm() << endl;
-  // cout << "coeff error: " << true_coeff - x << endl;
-  // cout << "true coeff: " << endl << true_coeff << endl;
-  // cout << "optimal coeff: " << endl << x << endl;
-
-  return 0;
+  if (mode == "nd") {
+    NumericalDiff<LeastSquareProblemFunctor> func_nd(func);
+    return solve<NumericalDiff<LeastSquareProblemFunctor> >(func_nd, true_coeff);
+  } else {
+    return solve<LeastSquareProblemFunctor >(func, true_coeff);
+  }
 }
