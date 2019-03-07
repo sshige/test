@@ -25,31 +25,24 @@ namespace opt_benchmark
   public:
     PolynomialFunc(const unsigned int order, const Eigen::VectorXd &coeff):
       ScalarFuncWithCoeff(coeff),
-      order_(order)
+      order_(order),
+      order_vec_(Eigen::VectorXd::LinSpaced(order+1, order, 0))
     {
       assert(coeff_.size() == order_+1);
     }
 
     double operator()(const double x)
     {
-      Eigen::VectorXd poly_x(coeff_.size());
-      for (unsigned int i = 0; i < coeff_.size(); i++) {
-        poly_x(i) = pow(x, (double)(order_ - i));
-      }
-      return coeff_.dot(poly_x);
+      return coeff_.dot(pow(x, order_vec_.array()).matrix());
     }
 
     Eigen::VectorXd derivative_with_coeff(const double x)
     {
-      Eigen::VectorXd poly_x(coeff_.size());
-      for (unsigned int i = 0; i < coeff_.size(); i++) {
-        poly_x(i) = pow(x, (double)(order_ - i));
-      }
-
-      return poly_x;
+      return pow(x, order_vec_.array()).matrix();
     }
 
-    unsigned int order_;
+    const unsigned int order_;
+    const Eigen::VectorXd order_vec_;
   };
   typedef std::shared_ptr<PolynomialFunc> PolynomialFuncPtr;
 
@@ -93,6 +86,8 @@ namespace opt_benchmark
       for (unsigned int i = 0; i < datasetNum(); i++) {
         fvec(i) = y_(i) - func_ptr_->operator()(x_(i));
       }
+      // The following is same:
+      // fvec = y_ - x_.unaryExpr([&](double x) { return func_ptr_->operator()(x); });
     }
 
     void evalJacobi(const Eigen::VectorXd &var, Eigen::MatrixXd &fjac)
