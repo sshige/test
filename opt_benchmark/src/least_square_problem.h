@@ -6,25 +6,25 @@
 
 namespace opt_benchmark
 {
-  class ScalarFunc
+  class ScalarFuncWithCoeff
   {
   public:
-    ScalarFunc(const Eigen::VectorXd &coeff):
+    ScalarFuncWithCoeff(const Eigen::VectorXd &coeff):
       coeff_(coeff)
     {}
 
     virtual double operator()(const double x) = 0;
-    virtual Eigen::VectorXd derivative(const double x) = 0;
+    virtual Eigen::VectorXd derivative_with_coeff(const double x) = 0;
 
     Eigen::VectorXd coeff_;
   };
-  typedef std::shared_ptr<ScalarFunc> ScalarFuncPtr;
+  typedef std::shared_ptr<ScalarFuncWithCoeff> ScalarFuncWithCoeffPtr;
 
-  class PolynomialFunc: public ScalarFunc
+  class PolynomialFunc: public ScalarFuncWithCoeff
   {
   public:
     PolynomialFunc(const unsigned int order, const Eigen::VectorXd &coeff):
-      ScalarFunc(coeff),
+      ScalarFuncWithCoeff(coeff),
       order_(order)
     {
       assert(coeff_.size() == order_+1);
@@ -39,7 +39,7 @@ namespace opt_benchmark
       return coeff_.dot(poly_x);
     }
 
-    Eigen::VectorXd derivative(const double x)
+    Eigen::VectorXd derivative_with_coeff(const double x)
     {
       Eigen::VectorXd poly_x(coeff_.size());
       for (unsigned int i = 0; i < coeff_.size(); i++) {
@@ -56,7 +56,7 @@ namespace opt_benchmark
   class LeastSquareProblem
   {
   public:
-    LeastSquareProblem(const ScalarFuncPtr &func_ptr, unsigned int data_num=100):
+    LeastSquareProblem(const ScalarFuncWithCoeffPtr &func_ptr, unsigned int data_num=100):
       func_ptr_(func_ptr)
     {
       x_ = Eigen::VectorXd::Random(data_num);
@@ -100,7 +100,7 @@ namespace opt_benchmark
       std::cout << "y:" << std::endl << y_ << std::endl;
     }
 
-    ScalarFuncPtr func_ptr_;
+    ScalarFuncWithCoeffPtr func_ptr_;
     Eigen::VectorXd x_;
     Eigen::VectorXd y_;
   };

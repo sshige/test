@@ -51,7 +51,7 @@ struct LeastSquareProblemFunctor : Functor<double>
   {
     lsp_.setDesignVariable(var);
     for (unsigned int i = 0; i < lsp_.datasetNum(); i++) {
-      fjac.row(i) = - lsp_.func_ptr_->derivative(lsp_.x_(i));
+      fjac.row(i) = - lsp_.func_ptr_->derivative_with_coeff(lsp_.x_(i));
     }
     return 0;
   }
