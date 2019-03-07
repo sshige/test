@@ -39,20 +39,14 @@ struct LeastSquareProblemFunctor : Functor<double>
   // Compute the function value into fvec for the current solution var
   int operator()(const VectorXd &var, VectorXd &fvec)
   {
-    lsp_.setDesignVariable(var);
-    for (unsigned int i = 0; i < lsp_.datasetNum(); i++) {
-      fvec(i) = lsp_.y_(i) - lsp_.func_ptr_->operator()(lsp_.x_(i));
-    }
+    lsp_.eval(var, fvec);
     return 0;
   }
 
   // Compute the jacobian into fjac for the current solution var
   int df(const VectorXd &var, MatrixXd &fjac)
   {
-    lsp_.setDesignVariable(var);
-    for (unsigned int i = 0; i < lsp_.datasetNum(); i++) {
-      fjac.row(i) = - lsp_.func_ptr_->derivative_with_coeff(lsp_.x_(i));
-    }
+    lsp_.evalJacobi(var, fjac);
     return 0;
   }
 

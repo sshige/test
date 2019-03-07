@@ -87,6 +87,22 @@ namespace opt_benchmark
       func_ptr_->coeff_ = var;
     }
 
+    void eval(const Eigen::VectorXd &var, Eigen::VectorXd &fvec)
+    {
+      setDesignVariable(var);
+      for (unsigned int i = 0; i < datasetNum(); i++) {
+        fvec(i) = y_(i) - func_ptr_->operator()(x_(i));
+      }
+    }
+
+    void evalJacobi(const Eigen::VectorXd &var, Eigen::MatrixXd &fjac)
+    {
+      setDesignVariable(var);
+      for (unsigned int i = 0; i < datasetNum(); i++) {
+        fjac.row(i) = - func_ptr_->derivative_with_coeff(x_(i));
+      }
+    }
+
     void printBasicInfo()
     {
       std::cout << "LeastSquareProblem:" << std::endl;
@@ -116,7 +132,7 @@ namespace opt_benchmark
     PolynomialFuncPtr poly_ptr = std::make_shared<PolynomialFunc>(order, true_coeff);
 
     lsp_ptr.reset(new LeastSquareProblem(poly_ptr, data_num));
-    lsp_ptr->func_ptr_->coeff_.setZero(); // unset true coeff
+    lsp_ptr->designVariable().setZero(); // unset true coeff
 
     lsp_ptr->printBasicInfo();
     // lsp_ptr->printXY();
