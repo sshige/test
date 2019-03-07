@@ -1,5 +1,5 @@
 #include <iostream>
-#include <ctime>
+#include <sys/time.h>
 #include <boost/program_options.hpp>
 #include <unsupported/Eigen/NonLinearOptimization>
 #include <unsupported/Eigen/NumericalDiff>
@@ -62,7 +62,8 @@ int solve(_Functor &func, const VectorXd &true_coeff)
   using namespace std;
 
   // solve problem
-  clock_t begin = clock();
+  struct timeval start, end;
+  gettimeofday(&start, NULL);
 
   LevenbergMarquardt<_Functor> lm(func);
   lm.parameters.ftol *= 1e-2;
@@ -72,8 +73,8 @@ int solve(_Functor &func, const VectorXd &true_coeff)
   VectorXd x = VectorXd::Zero(func.lsp_ptr_->designVariableDim());
   int status = lm.minimize(x);
 
-  clock_t end = clock();
-  double optimization_time = double(end - begin) / CLOCKS_PER_SEC;
+  gettimeofday(&end, NULL);
+  double optimization_time = (end.tv_sec  - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
 
   // print result
   cout << "Optimization status:" << status << endl;
