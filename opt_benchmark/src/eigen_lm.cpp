@@ -2,6 +2,7 @@
 #include <ctime>
 #include <unsupported/Eigen/NonLinearOptimization>
 #include "least_square_problem.h"
+#include <boost/program_options.hpp>
 
 
 using namespace Eigen;
@@ -53,14 +54,26 @@ struct LeastSquareProblemFunctor : Functor<double>
   LeastSquareProblemPtr lsp_ptr_;
 };
 
-int main()
+int main(int argc, char** argv)
 {
   using namespace std;
+  namespace po = boost::program_options;
+
+  po::options_description desc("Allowed options");
+  desc.add_options()("mode", po::value<std::string>(), "derivative mode");
+  po::variables_map vm;
+  po::store(po::parse_command_line(argc, argv, desc), vm);
+  po::notify(vm);
+  std::string mode = "default";
+  if(vm.count("mode")) {
+    mode = vm["mode"].as<std::string>();
+  }
+  cout << "derivative mode: " << mode << endl;
 
   // 1. setup problem
   LeastSquareProblemPtr lsp_ptr;
   VectorXd true_coeff;
-  initialize_sample_polynomial_lsp(lsp_ptr, true_coeff, "default");
+  initialize_sample_polynomial_lsp(lsp_ptr, true_coeff, mode);
 
   // 2. solve problem
   clock_t begin = clock();
