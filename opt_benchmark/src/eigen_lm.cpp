@@ -5,6 +5,7 @@
 
 
 using namespace Eigen;
+using namespace opt_benchmark;
 
 template<typename _Scalar>
 struct Functor
