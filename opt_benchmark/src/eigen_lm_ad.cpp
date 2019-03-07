@@ -1,11 +1,11 @@
 #include <iostream>
 #include <ctime>
 #include <unsupported/Eigen/NonLinearOptimization>
-#include <unsupported/Eigen/AutoDiff>
 #include "least_square_problem.h"
 
 
 using namespace Eigen;
+using namespace opt_benchmark;
 
 template<typename _Scalar>
 struct Functor
@@ -31,39 +31,22 @@ struct Functor
 // Specialized functor
 struct LeastSquareProblemFunctor : Functor<double>
 {
-  typedef Eigen::AutoDiffScalar<Eigen::Matrix<Scalar,Eigen::Dynamic,1> > ADS;
-  typedef Eigen::Matrix<ADS, Eigen::Dynamic, 1> VectorXad;
-
   LeastSquareProblemFunctor(const LeastSquareProblem &lsp):
     Functor<double>(lsp.designVariableDim(), lsp.datasetNum()),
     lsp_(lsp)
   {};
 
-  // Compute the function value into fvec for the current solution x
+  // Compute the function value into fvec for the current solution var
   int operator()(const VectorXd &var, VectorXd &fvec)
   {
-    lsp_.setDesignVariable(var);
-    for (unsigned int i = 0; i < lsp_.datasetNum(); i++) {
-      fvec(i) = lsp_.y_(i) - lsp_.func_ptr_->operator()(lsp_.x_(i));
-    }
+    lsp_.eval(var, fvec);
     return 0;
   }
 
-  // Compute the jacobian into fjac for the current solution x
+  // Compute the jacobian into fjac for the current solution var
   int df(const VectorXd &var, MatrixXd &fjac)
   {
-    VectorXad coeff(lsp_.designVariableDim());
-    for(unsigned int i = 0; i < coeff.rows(); i++) {
-      coeff(i) = ADS(var(i), coeff.rows(), i);
-    }
-
-    lsp_.setDesignVariable(var);
-    VectorXad fvalue(1);
-    for (unsigned int i = 0; i < lsp_.datasetNum(); i++) {
-      fvalue = lsp_.y_(i) - lsp_.func_ptr_->operator()(lsp_.x_(i));
-      fjac.row(i) = fvalue(0).derivatives();
-    }
-
+    lsp_.evalJacobiAD(var, fjac);
     return 0;
   }
 
