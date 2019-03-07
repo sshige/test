@@ -31,26 +31,26 @@ struct Functor
 // Specialized functor
 struct LeastSquareProblemFunctor : Functor<double>
 {
-  LeastSquareProblemFunctor(const LeastSquareProblem &lsp):
-    Functor<double>(lsp.designVariableDim(), lsp.datasetNum()),
-    lsp_(lsp)
+  LeastSquareProblemFunctor(const LeastSquareProblemPtr &lsp_ptr):
+    Functor<double>(lsp_ptr->designVariableDim(), lsp_ptr->datasetNum()),
+    lsp_ptr_(lsp_ptr)
   {};
 
   // Compute the function value into fvec for the current solution var
   int operator()(const VectorXd &var, VectorXd &fvec)
   {
-    lsp_.eval(var, fvec);
+    lsp_ptr_->eval(var, fvec);
     return 0;
   }
 
   // Compute the jacobian into fjac for the current solution var
   int df(const VectorXd &var, MatrixXd &fjac)
   {
-    lsp_.evalJacobi(var, fjac);
+    lsp_ptr_->evalJacobi(var, fjac);
     return 0;
   }
 
-  LeastSquareProblem lsp_;
+  LeastSquareProblemPtr lsp_ptr_;
 };
 
 int main()
@@ -60,12 +60,12 @@ int main()
   // 1. setup problem
   LeastSquareProblemPtr lsp_ptr;
   VectorXd true_coeff;
-  initialize_sample_polynomial_lsp(lsp_ptr, true_coeff);
+  initialize_sample_polynomial_lsp(lsp_ptr, true_coeff, "default");
 
   // 2. solve problem
   clock_t begin = clock();
 
-  LeastSquareProblemFunctor func(*lsp_ptr);
+  LeastSquareProblemFunctor func(lsp_ptr);
   LevenbergMarquardt<LeastSquareProblemFunctor> lm(func);
 
   lm.parameters.ftol *= 1e-2;

@@ -3,53 +3,74 @@
 
 #include <memory>
 #include <Eigen/Dense>
+#include <unsupported/Eigen/AutoDiff>
+
 
 namespace opt_benchmark
 {
+  typedef Eigen::AutoDiffScalar<Eigen::Matrix<double,Eigen::Dynamic,1> > ADS;
+  typedef Eigen::Matrix<ADS, Eigen::Dynamic, 1> VectorXad;
+
+  template<typename Scalar = double>
   class ScalarFuncWithCoeff
   {
   public:
-    ScalarFuncWithCoeff(const Eigen::VectorXd &coeff):
+    typedef Eigen::Matrix<Scalar,Eigen::Dynamic,1> VectorXS;
+
+    ScalarFuncWithCoeff(const VectorXS &coeff):
       coeff_(coeff)
     {}
 
-    virtual double operator()(const double x) = 0;
+    virtual Scalar operator()(const double x) = 0;
     virtual Eigen::VectorXd derivative_with_coeff(const double x) = 0;
 
-    Eigen::VectorXd coeff_;
+    VectorXS coeff_;
   };
-  typedef std::shared_ptr<ScalarFuncWithCoeff> ScalarFuncWithCoeffPtr;
+  template <typename Scalar>
+  using ScalarFuncWithCoeffPtr = std::shared_ptr<ScalarFuncWithCoeff<Scalar>>;
 
-  class PolynomialFunc: public ScalarFuncWithCoeff
+  template<typename Scalar = double>
+  class PolynomialFunc: public ScalarFuncWithCoeff<Scalar>
   {
   public:
-    PolynomialFunc(const unsigned int order, const Eigen::VectorXd &coeff):
-      ScalarFuncWithCoeff(coeff),
-      order_(order),
-      order_vec_(Eigen::VectorXd::LinSpaced(order+1, order, 0))
+    typedef Eigen::Matrix<Scalar,Eigen::Dynamic,1> VectorXS;
+    typedef ScalarFuncWithCoeff<Scalar> inherited;
+
+    PolynomialFunc(const unsigned int order, const VectorXS &coeff):
+      ScalarFuncWithCoeff<Scalar>(coeff),
+      order_(order)
     {
-      assert(coeff_.size() == order_+1);
+      assert(inherited::coeff_.size() == order_+1);
     }
 
-    double operator()(const double x)
+    Scalar operator()(const double x)
     {
-      return coeff_.dot(pow(x, order_vec_.array()).matrix());
+      Scalar ret = 0.0;
+      for (unsigned int i = 0; i < order_+1; i++) {
+        ret += inherited::coeff_(i) * pow(x, (double)(order_ - i));
+      }
+      return ret;
     }
 
     Eigen::VectorXd derivative_with_coeff(const double x)
     {
-      return pow(x, order_vec_.array()).matrix();
+      Eigen::VectorXd x_powed(order_+1);
+      for (unsigned int i = 0; i < order_+1; i++) {
+        x_powed(i) = pow(x, (double)(order_ - i));
+      }
+      return x_powed;
     }
 
     const unsigned int order_;
-    const Eigen::VectorXd order_vec_;
   };
-  typedef std::shared_ptr<PolynomialFunc> PolynomialFuncPtr;
+  template <typename Scalar>
+  using PolynomialFuncPtr = std::shared_ptr<PolynomialFunc<Scalar>>;
 
   class LeastSquareProblem
   {
   public:
-    LeastSquareProblem(const ScalarFuncWithCoeffPtr &func_ptr, unsigned int data_num=100):
+    LeastSquareProblem(const ScalarFuncWithCoeffPtr<double> &func_ptr,
+                       unsigned int data_num=100):
       func_ptr_(func_ptr)
     {
       x_ = Eigen::VectorXd::Random(data_num);
@@ -90,7 +111,7 @@ namespace opt_benchmark
       // fvec = y_ - x_.unaryExpr([&](double x) { return func_ptr_->operator()(x); });
     }
 
-    void evalJacobi(const Eigen::VectorXd &var, Eigen::MatrixXd &fjac)
+    virtual void evalJacobi(const Eigen::VectorXd &var, Eigen::MatrixXd &fjac)
     {
       setDesignVariable(var);
       for (unsigned int i = 0; i < datasetNum(); i++) {
@@ -111,24 +132,58 @@ namespace opt_benchmark
       std::cout << "y:" << std::endl << y_ << std::endl;
     }
 
-    ScalarFuncWithCoeffPtr func_ptr_;
+    ScalarFuncWithCoeffPtr<double> func_ptr_;
     Eigen::VectorXd x_;
     Eigen::VectorXd y_;
   };
   typedef std::shared_ptr<LeastSquareProblem> LeastSquareProblemPtr;
 
+  class LeastSquareProblemAD: public LeastSquareProblem
+  {
+  public:
+    LeastSquareProblemAD(const ScalarFuncWithCoeffPtr<double> &func_ptr,
+                         const ScalarFuncWithCoeffPtr<ADS> &func_ad_ptr,
+                         unsigned int data_num=100):
+      LeastSquareProblem(func_ptr, data_num),
+      func_ad_ptr_(func_ad_ptr)
+    {
+    }
+
+    virtual void evalJacobi(const Eigen::VectorXd &var, Eigen::MatrixXd &fjac)
+    {
+      // initialize coeff as auto diff variable
+      for(unsigned int i = 0; i < designVariableDim(); i++) {
+        func_ad_ptr_->coeff_(i) = ADS(func_ptr_->coeff_(i), designVariableDim(), i);
+      }
+
+      VectorXad fvec_ad(datasetNum());
+      for (unsigned int i = 0; i < datasetNum(); i++) {
+        fvec_ad(i) = y_(i) - func_ad_ptr_->operator()(x_(i));
+        fjac.row(i) = fvec_ad(i).derivatives();
+      }
+    }
+
+    ScalarFuncWithCoeffPtr<ADS> func_ad_ptr_;
+  };
+  typedef std::shared_ptr<LeastSquareProblemAD> LeastSquareProblemADPtr;
+
 
   void initialize_sample_polynomial_lsp(LeastSquareProblemPtr &lsp_ptr,
                                         Eigen::VectorXd &true_coeff,
+                                        std::string mode = "default",
                                         unsigned int order = 20,
-                                        unsigned int data_num = 1000)
+                                        unsigned int data_num = 1000
+                                        )
   {
     true_coeff = Eigen::VectorXd::Random(order+1);
-    PolynomialFuncPtr poly_ptr = std::make_shared<PolynomialFunc>(order, true_coeff);
-
-    lsp_ptr.reset(new LeastSquareProblem(poly_ptr, data_num));
+    PolynomialFuncPtr<double> poly_ptr = std::make_shared<PolynomialFunc<double>>(order, true_coeff);
+    if (mode == "ad") {
+      PolynomialFuncPtr<ADS> poly_ad_ptr = std::make_shared<PolynomialFunc<ADS>>(order, VectorXad(true_coeff.size()));
+      lsp_ptr.reset(new LeastSquareProblemAD(poly_ptr, poly_ad_ptr, data_num));
+    } else {
+      lsp_ptr.reset(new LeastSquareProblem(poly_ptr, data_num));
+    }
     lsp_ptr->designVariable().setZero(); // unset true coeff
-
     lsp_ptr->printBasicInfo();
     // lsp_ptr->printXY();
   }
