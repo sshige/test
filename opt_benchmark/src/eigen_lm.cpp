@@ -9,6 +9,9 @@
 using namespace Eigen;
 using namespace opt_benchmark;
 
+/**
+ * \brief Base class of functor for Levenberg-Marquardt method.
+ */
 template<typename _Scalar>
 struct Functor
 {
@@ -30,7 +33,9 @@ struct Functor
   int values() const { return values_; }
 };
 
-// Specialized functor
+/**
+ * \brief Class of functor for Levenberg-Marquardt method with least square problem.
+ */
 struct LeastSquareProblemFunctor : Functor<double>
 {
   LeastSquareProblemFunctor(const LeastSquareProblemPtr &lsp_ptr):
@@ -55,7 +60,11 @@ struct LeastSquareProblemFunctor : Functor<double>
   LeastSquareProblemPtr lsp_ptr_;
 };
 
-
+/**
+ * \brief Solve.
+ *
+ * template type _Functor is LeastSquareProblemFunctor or NumericalDiff<LeastSquareProblemFunctor>
+ */
 template <typename _Functor>
 int solve(_Functor &func, const VectorXd &true_coeff)
 {

@@ -12,6 +12,11 @@ namespace opt_benchmark
   typedef Eigen::AutoDiffScalar<Eigen::Matrix<double,Eigen::Dynamic,1> > ADS;
   typedef Eigen::Matrix<ADS, Eigen::Dynamic, 1> VectorXad;
 
+  /**
+   * \brief Base class for scalar-input, scalar-output function, which has parameter as coefficient.
+   *
+   * y = f(x)
+   */
   template<typename Scalar = double>
   class ScalarFuncWithCoeff
   {
@@ -30,6 +35,12 @@ namespace opt_benchmark
   template <typename Scalar>
   using ScalarFuncWithCoeffPtr = std::shared_ptr<ScalarFuncWithCoeff<Scalar>>;
 
+  /**
+   * \brief Class for polynomial function.
+   *
+   * y = c_0 x^n + c_1 x^{n-1} + ... + c_{n-1} x + c_n
+   * coefficient is (c_0, c_1, ..., c_n)
+   */
   template<typename Scalar = double>
   class PolynomialFunc: public ScalarFuncWithCoeff<Scalar>
   {
@@ -62,6 +73,7 @@ namespace opt_benchmark
 
     Eigen::VectorXd derivative_with_coeff(const double x)
     {
+      /* derivative with coefficient (c_0, c_1, ..., c_n) is (x^n, x^{n-1}, ..., x, 1) */
       return pow(x, order_vec_.array());
     }
 
@@ -71,6 +83,12 @@ namespace opt_benchmark
   template <typename Scalar>
   using PolynomialFuncPtr = std::shared_ptr<PolynomialFunc<Scalar>>;
 
+  /**
+   * \brief Class for sine function.
+   *
+   * y = \sum_{i=0}^{base_num-1} c_{3i} sin(c_{3i+1} x + c_{3i+2})
+   * coefficient is (c_0, c_1, ..., c_{3 base_num})
+   */
   template<typename Scalar = double>
   class SineFunc: public ScalarFuncWithCoeff<Scalar>
   {
@@ -99,6 +117,10 @@ namespace opt_benchmark
       Eigen::VectorXd der(3*base_num_);
 #pragma omp parallel for
       for (unsigned int i = 0; i < base_num_; i++) {
+        /* derivative with coefficient (c_{3i}, c_{3i+1}, c_{3i+2}) is
+           ( sin(c_{3i+1} x + c_{3i+2}),
+           c_{3i} x cos(c_{3i+1} x + c_{3i+2}),
+           c_{3i} cos(c_{3i+1} x + c_{3i+2}) ) */
         der(3*i) = ((ADS)sin(inherited::coeff_(3*i+1) * x + inherited::coeff_(3*i+2))).value();
         der(3*i+1) = ((ADS)(inherited::coeff_(3*i) * x * cos(inherited::coeff_(3*i+1) * x + inherited::coeff_(3*i+2)))).value();
         der(3*i+2) = ((ADS)(inherited::coeff_(3*i) * cos(inherited::coeff_(3*i+1) * x + inherited::coeff_(3*i+2)))).value();
@@ -111,6 +133,9 @@ namespace opt_benchmark
   template <typename Scalar>
   using SineFuncPtr = std::shared_ptr<SineFunc<Scalar>>;
 
+  /**
+   * \brief Class for least square problem.
+   */
   class LeastSquareProblem
   {
   public:
@@ -186,6 +211,9 @@ namespace opt_benchmark
   };
   typedef std::shared_ptr<LeastSquareProblem> LeastSquareProblemPtr;
 
+  /**
+   * \brief Class for least square problem with automatic differentiation.
+   */
   class LeastSquareProblemAD: public LeastSquareProblem
   {
   public:
@@ -216,6 +244,9 @@ namespace opt_benchmark
   typedef std::shared_ptr<LeastSquareProblemAD> LeastSquareProblemADPtr;
 
 
+  /**
+   * \brief Initialize the least square problem with polynomial function.
+   */
   void initialize_sample_polynomial_lsp(LeastSquareProblemPtr &lsp_ptr,
                                         Eigen::VectorXd &true_coeff,
                                         std::string mode = "default",
@@ -236,6 +267,9 @@ namespace opt_benchmark
     // lsp_ptr->printXY();
   }
 
+  /**
+   * \brief Initialize the least square problem with sine function.
+   */
   void initialize_sample_sine_lsp(LeastSquareProblemPtr &lsp_ptr,
                                   Eigen::VectorXd &true_coeff,
                                   std::string mode = "default",
