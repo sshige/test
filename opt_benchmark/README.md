@@ -10,10 +10,12 @@ catkin bt --force-cmake --cmake-args -DUSE_OPENMP=false
 ```
 To use OpenBLAS,
 ```bash
-catkin bt --force-cmake --cmake-args -DEIGEN3.3_FROM_SOURCE=true --DUSE_OPENBLAS=true
+catkin bt --force-cmake --cmake-args -DEIGEN3.3_FROM_SOURCE=true -DUSE_OPENBLAS=true
 ```
 
 ## Execute
+
+Solve the nonlienar least square problem with Levenberg-Marquardt method.
 
 ```bash
 # polynomial problem
