@@ -77,7 +77,7 @@ int solve(_Functor &func, const VectorXd &true_coeff)
   double optimization_time = (end.tv_sec  - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1e6;
 
   // print result
-  cout << "Optimization status:" << status << endl;
+  cout << "Optimization status: " << status << endl;
   cout << "  - status: " << status << endl;
   cout << "  - number of function evaluation: " << lm.nfev << endl;
   cout << "  - number of jacobian evaluation: " << lm.njev << endl;

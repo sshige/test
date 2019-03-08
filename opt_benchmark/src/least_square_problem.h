@@ -38,30 +38,34 @@ namespace opt_benchmark
 
     PolynomialFunc(const unsigned int order, const VectorXS &coeff):
       ScalarFuncWithCoeff<Scalar>(coeff),
-      order_(order)
+      order_(order),
+      order_vec_(Eigen::VectorXd::LinSpaced(order+1, order, 0))
     {
       assert(inherited::coeff_.size() == order_+1);
     }
 
     Scalar operator()(const double x)
     {
-      Scalar ret = 0.0;
+#if EIGEN_VERSION_AT_LEAST(3,3,9)
+      return inherited::coeff_.dot(pow(x, order_vec_.array()).matrix());
+#else
+#warning "Eigen is not latest, so we cannot use eigen multiplication between matrix of different scalar type."
+      Scalar ret = 0;
+      Eigen::VectorXd x_powed = pow(x, order_vec_.array());
       for (unsigned int i = 0; i < order_+1; i++) {
-        ret += inherited::coeff_(i) * pow(x, (double)(order_ - i));
+        ret += inherited::coeff_(i) * x_powed(i);
       }
       return ret;
+#endif
     }
 
     Eigen::VectorXd derivative_with_coeff(const double x)
     {
-      Eigen::VectorXd x_powed(order_+1);
-      for (unsigned int i = 0; i < order_+1; i++) {
-        x_powed(i) = pow(x, (double)(order_ - i));
-      }
-      return x_powed;
+      return pow(x, order_vec_.array());
     }
 
     const unsigned int order_;
+    const Eigen::VectorXd order_vec_;
   };
   template <typename Scalar>
   using PolynomialFuncPtr = std::shared_ptr<PolynomialFunc<Scalar>>;

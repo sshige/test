@@ -10,6 +10,8 @@ set(USE_OPENBLAS false)
 set(USE_OPENMP true)
 
 if(EIGEN3.3_FROM_SOURCE)
+  # Assume that Eigen is installed from source with the following cmake command
+  # cmake .. -DCMAKE_INSTALL_PREFIX=${HOME}/install/
   find_package(Eigen3 3.3 REQUIRED CONFIG PATHS $ENV{HOME}/install/share/eigen3/cmake NO_DEFAULT_PATH)
   message("Eigen built from source is used: ${EIGEN3_USE_FILE}")
   set(Eigen_LIBRARIES ${EIGEN3_LIBRARIES})
