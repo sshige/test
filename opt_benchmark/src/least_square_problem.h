@@ -2,6 +2,7 @@
 #define __LEAST_SQUARE_PROBLEM_H__
 
 #include <memory>
+#include <cmath>
 #include <Eigen/Dense>
 #include <unsupported/Eigen/AutoDiff>
 
@@ -69,6 +70,46 @@ namespace opt_benchmark
   };
   template <typename Scalar>
   using PolynomialFuncPtr = std::shared_ptr<PolynomialFunc<Scalar>>;
+
+  template<typename Scalar = double>
+  class SineFunc: public ScalarFuncWithCoeff<Scalar>
+  {
+  public:
+    typedef Eigen::Matrix<Scalar,Eigen::Dynamic,1> VectorXS;
+    typedef ScalarFuncWithCoeff<Scalar> inherited;
+
+    SineFunc(const unsigned int base_num, const VectorXS &coeff):
+      ScalarFuncWithCoeff<Scalar>(coeff),
+      base_num_(base_num)
+    {
+      assert(inherited::coeff_.size() == 3*base_num_);
+    }
+
+    Scalar operator()(const double x)
+    {
+      Scalar ret = 0;
+      for (unsigned int i = 0; i < base_num_; i++) {
+        ret += inherited::coeff_(3*i) * sin(inherited::coeff_(3*i+1) * x + inherited::coeff_(3*i+2));
+      }
+      return ret;
+    }
+
+    Eigen::VectorXd derivative_with_coeff(const double x)
+    {
+      Eigen::VectorXd der(3*base_num_);
+#pragma omp parallel for
+      for (unsigned int i = 0; i < base_num_; i++) {
+        der(3*i) = ((ADS)sin(inherited::coeff_(3*i+1) * x + inherited::coeff_(3*i+2))).value();
+        der(3*i+1) = ((ADS)(inherited::coeff_(3*i) * x * cos(inherited::coeff_(3*i+1) * x + inherited::coeff_(3*i+2)))).value();
+        der(3*i+2) = ((ADS)(inherited::coeff_(3*i) * cos(inherited::coeff_(3*i+1) * x + inherited::coeff_(3*i+2)))).value();
+      }
+      return der;
+    }
+
+    const unsigned int base_num_;
+  };
+  template <typename Scalar>
+  using SineFuncPtr = std::shared_ptr<SineFunc<Scalar>>;
 
   class LeastSquareProblem
   {
@@ -186,6 +227,26 @@ namespace opt_benchmark
     PolynomialFuncPtr<double> poly_ptr = std::make_shared<PolynomialFunc<double>>(order, true_coeff);
     if (mode == "ad") {
       PolynomialFuncPtr<ADS> poly_ad_ptr = std::make_shared<PolynomialFunc<ADS>>(order, VectorXad(true_coeff.size()));
+      lsp_ptr.reset(new LeastSquareProblemAD(poly_ptr, poly_ad_ptr, data_num));
+    } else {
+      lsp_ptr.reset(new LeastSquareProblem(poly_ptr, data_num));
+    }
+    lsp_ptr->designVariable().setZero(); // unset true coeff
+    lsp_ptr->printBasicInfo();
+    // lsp_ptr->printXY();
+  }
+
+  void initialize_sample_sine_lsp(LeastSquareProblemPtr &lsp_ptr,
+                                  Eigen::VectorXd &true_coeff,
+                                  std::string mode = "default",
+                                  unsigned int base_num = 2,
+                                  unsigned int data_num = 1000
+                                  )
+  {
+    true_coeff = Eigen::VectorXd::Random(3*base_num).array().abs();
+    SineFuncPtr<double> poly_ptr = std::make_shared<SineFunc<double>>(base_num, true_coeff);
+    if (mode == "ad") {
+      SineFuncPtr<ADS> poly_ad_ptr = std::make_shared<SineFunc<ADS>>(base_num, VectorXad(true_coeff.size()));
       lsp_ptr.reset(new LeastSquareProblemAD(poly_ptr, poly_ad_ptr, data_num));
     } else {
       lsp_ptr.reset(new LeastSquareProblem(poly_ptr, data_num));
