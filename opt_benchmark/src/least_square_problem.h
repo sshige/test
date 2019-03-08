@@ -61,7 +61,7 @@ namespace opt_benchmark
 #if EIGEN_VERSION_AT_LEAST(3,3,9)
       return inherited::coeff_.dot(pow(x, order_vec_.array()).matrix());
 #else
-#warning "Eigen is not latest, so we cannot use eigen multiplication between matrix of different scalar type."
+#warning "Eigen is not latest, so we cannot use eigen multiplication between matrix of different scalar type. ref. https://forum.kde.org/viewtopic.php?f=74&t=110376 https://bitbucket.org/eigen/eigen/pull-requests/194/relax-mixing-type-constraints-for-binary"
       Scalar ret = 0;
       Eigen::VectorXd x_powed = pow(x, order_vec_.array());
       for (unsigned int i = 0; i < order_+1; i++) {

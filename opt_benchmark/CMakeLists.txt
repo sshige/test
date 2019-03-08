@@ -5,9 +5,9 @@ add_compile_options(-std=c++11)
 
 find_package(catkin COMPONENTS cmake_modules rostest)
 
-set(EIGEN3.3_FROM_SOURCE true)
-set(USE_OPENBLAS false)
-set(USE_OPENMP true)
+set(EIGEN3.3_FROM_SOURCE false CACHE BOOL "set true to use eigen installed in ~/install directory.")
+set(USE_OPENBLAS false CACHE BOOL "set true to use OpenBLAS. this is enabled only when EIGEN3.3_FROM_SOURCE is true.")
+set(USE_OPENMP true CACHE BOOL "set true to use OpenMP.")
 
 if(EIGEN3.3_FROM_SOURCE)
   # Assume that Eigen is installed from source with the following cmake command
@@ -19,7 +19,7 @@ if(EIGEN3.3_FROM_SOURCE)
 else()
   find_package(Eigen REQUIRED)
   if(USE_OPENBLAS)
-    message(WARNING "USE_OPENBLAS is force disabled when EIGEN3.3_FROM_SOURCE is false.")
+    message(WARNING "USE_OPENBLAS is force disabled when EIGEN3.3_FROM_SOURCE is false because apt version cause error. ref. https://forum.kde.org/viewtopic.php?f=74&t=123117#p359150")
   endif()
   set(USE_OPENBLAS false)
 endif()
