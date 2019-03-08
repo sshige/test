@@ -106,6 +106,7 @@ int main(int argc, char** argv)
     mode = vm["mode"].as<std::string>();
   }
   cout << "derivative mode: " << mode << endl;
+  cout << "number of threads: " << Eigen::nbThreads() << endl;
 
   // setup problem
   LeastSquareProblemPtr lsp_ptr;
