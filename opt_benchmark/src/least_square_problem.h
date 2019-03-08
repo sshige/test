@@ -70,12 +70,13 @@ namespace opt_benchmark
   {
   public:
     LeastSquareProblem(const ScalarFuncWithCoeffPtr<double> &func_ptr,
-                       unsigned int data_num=100):
+                       unsigned int data_num):
       func_ptr_(func_ptr)
     {
       x_ = Eigen::VectorXd::Random(data_num);
       y_ = Eigen::VectorXd(data_num);
 
+#pragma omp parallel for
       for (unsigned int i = 0; i < data_num; i++) {
         y_(i) = func_ptr_->operator()(x_(i));
       }
@@ -104,6 +105,7 @@ namespace opt_benchmark
     void eval(const Eigen::VectorXd &var, Eigen::VectorXd &fvec)
     {
       setDesignVariable(var);
+#pragma omp parallel for
       for (unsigned int i = 0; i < datasetNum(); i++) {
         fvec(i) = y_(i) - func_ptr_->operator()(x_(i));
       }
@@ -114,6 +116,7 @@ namespace opt_benchmark
     virtual void evalJacobi(const Eigen::VectorXd &var, Eigen::MatrixXd &fjac)
     {
       setDesignVariable(var);
+#pragma omp parallel for
       for (unsigned int i = 0; i < datasetNum(); i++) {
         fjac.row(i) = - func_ptr_->derivative_with_coeff(x_(i));
       }
@@ -143,7 +146,7 @@ namespace opt_benchmark
   public:
     LeastSquareProblemAD(const ScalarFuncWithCoeffPtr<double> &func_ptr,
                          const ScalarFuncWithCoeffPtr<ADS> &func_ad_ptr,
-                         unsigned int data_num=100):
+                         unsigned int data_num):
       LeastSquareProblem(func_ptr, data_num),
       func_ad_ptr_(func_ad_ptr)
     {

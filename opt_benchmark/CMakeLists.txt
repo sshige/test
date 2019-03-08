@@ -7,7 +7,7 @@ find_package(catkin COMPONENTS cmake_modules rostest)
 
 set(EIGEN3.3_FROM_SOURCE true)
 set(USE_OPENBLAS false)
-set(USE_OPENMP false)
+set(USE_OPENMP true)
 
 if(EIGEN3.3_FROM_SOURCE)
   find_package(Eigen3 3.3 REQUIRED CONFIG PATHS $ENV{HOME}/install/share/eigen3/cmake NO_DEFAULT_PATH)
