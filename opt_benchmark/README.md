@@ -1,21 +1,21 @@
 # opt_benchmark
 
 ## Build
-```
+```bash
 catkin bt --force-cmake
 ```
 To disable OpenMP,
-```
+```bash
 catkin bt --force-cmake --cmake-args -DUSE_OPENMP=false
 ```
 To use OpenBLAS,
-```
+```bash
 catkin bt --force-cmake --cmake-args -DEIGEN3.3_FROM_SOURCE=true --DUSE_OPENBLAS=true
 ```
 
 ## Execute
 
-```
+```bash
 # polynomial problem
 # use analytical differentiation
 rosrun opt_benchmark eigen_lm # default is --mode default --func poly
