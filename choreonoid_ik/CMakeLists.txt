@@ -5,7 +5,7 @@ add_compile_options(-std=c++11)
 
 set(USE_OPENMP true CACHE BOOL "set true to use OpenMP.")
 
-find_package(catkin COMPONENTS cmake_modules rostest)
+find_package(catkin REQUIRED COMPONENTS cmake_modules rostest roscpp roslib)
 find_package(Eigen REQUIRED)
 find_package(Boost 1.40 COMPONENTS program_options REQUIRED)
 if(USE_OPENMP)
@@ -18,7 +18,9 @@ endif()
 include(FindPkgConfig)
 pkg_check_modules(CnoidBody choreonoid-body REQUIRED)
 
-catkin_package()
+catkin_package(
+  CATKIN_DEPENDS roscpp roslib
+  )
 
 # for debug
 # message("[Eigen_LIBRARIES] ${Eigen_LIBRARIES}")
