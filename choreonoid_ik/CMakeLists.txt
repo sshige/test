@@ -58,3 +58,9 @@ target_link_libraries(sample_ik ${Boost_LIBRARIES} ${CnoidBody_LIBRARIES} ${catk
 
 add_library(CnoidSampleIKPlugin SHARED src/sample_ik_plugin.cpp)
 target_link_libraries(sample_ik ${Boost_LIBRARIES} ${CnoidBodyPlugin_LIBRARIES} ${catkin_LIBRARIES})
+
+add_library(SimpleBodyGenerator SHARED src/SimpleBodyGenerator.cpp)
+target_link_libraries(SimpleBodyGenerator ${Boost_LIBRARIES} ${CnoidBody_LIBRARIES} ${catkin_LIBRARIES})
+
+add_library(EusChoreonoidConverter SHARED src/EusChoreonoidConverter.cpp)
+target_link_libraries(EusChoreonoidConverter SimpleBodyGenerator)
