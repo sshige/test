@@ -1,13 +1,19 @@
 # choreonoid_ik
 
 ## Build
-Need choreonoid version 1.7.
 ```bash
 catkin build choreonoid_ik
 ```
 
 ## Execute
+```
+roscd choreonoid_ik/euslisp/sample/
+roseus sample-eus-choreonoid-converter.l
+(sample-eus-choreonoid-converter-sample-robot) ;; :wait? t for step execution
+(sample-eus-choreonoid-converter-pa10) ;; :wait? t for step execution
+```
 
+## Misc
 ```bash
 # FK and IK sample
 rosrun choreonoid_ik sample_ik
