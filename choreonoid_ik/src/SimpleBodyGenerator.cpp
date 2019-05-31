@@ -9,10 +9,10 @@ void SimpleBodyGenerator::initializeBodyGeneration(const string &bodyName)
 {
   DEBUG_PRINT("initialize body. name: " << bodyName);
 
-  nameLinkInfoMap.clear();
+  nameLinkInfoMap.clear(); // delete all map container
   body = new Body;
-  body->setName(bodyName);
-  body->setModelName(bodyName);
+  body->setName(bodyName); // set name to body
+  body->setModelName(bodyName); // set model name
 }
 
 void SimpleBodyGenerator::addLinkFromLinkInfo(LinkInfo &linkInfo)

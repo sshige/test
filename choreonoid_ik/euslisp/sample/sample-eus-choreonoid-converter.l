@@ -11,19 +11,27 @@
   (objects (list robot))
 
   ;; initialize
-  (generate-cnoid-model :robot robot)
-  (print-cnoid-model-info)
-  (assert (eps= (norm (send robot :angle-vector)) 0.0))
-  (assert (eps= (norm (send robot :cnoid-angle-vector)) 0.0))
+  (generate-cnoid-model :robot robot) ;; make choreonoid model
+  (print-cnoid-model-info) ;; print info
+  (assert (eps= (norm (send robot :angle-vector)) 0.0)
+          ("initial euslisp angle-vector should be 0")
+          )
+  (assert (eps= (norm (send robot :cnoid-angle-vector)) 0.0)
+          ("initial cnoid angle-vector should be 0")
+          )
 
   ;; set/get joint angle
-  (assert (eps= (send (send test-link :joint) :joint-angle) 0.0))
-  (assert (eps= (send (send test-link :joint) :cnoid-joint-angle) 0.0))
   (send (send test-link :joint) :cnoid-joint-angle (send (send test-link :joint) :max-angle))
-  (assert (eps= (send (send test-link :joint) :joint-angle) 0.0))
-  (assert (eps= (send (send test-link :joint) :cnoid-joint-angle) (float (send (send test-link :joint) :max-angle))))
+  (assert (eps= (send (send test-link :joint) :joint-angle) 0.0)
+          ("euslisp angle should not be changed")
+          )
+  (assert (eps= (send (send test-link :joint) :cnoid-joint-angle) (float (send (send test-link :joint) :max-angle)))
+          ("choreonoid angle should be changed to max angle")
+          )
   (send *robot* :cnoid->eus)
-  (assert (eps= (send (send test-link :joint) :joint-angle) (float (send (send test-link :joint) :max-angle))))
+  (assert (eps= (send (send test-link :joint) :joint-angle) (float (send (send test-link :joint) :max-angle)))
+          ("eus angle should become max angle in this stage")
+          )
   (send *irtviewer* :draw-objects)
   (when wait?
     (warning-message 2 "set/get joint angle~%")
@@ -96,6 +104,19 @@
 ;; https://github.com/s-nakaoka/choreonoid/blob/master/src/Body/LinkTraverse.cpp#L166-L168
 ;; (warn "(sample-eus-choreonoid-converter-sample-arm)~%")
 
+(defun sample-eus-choreonoid-converter-rhp4b
+    (&key (wait? nil))
+  (require :rhp4b "package://khi_ros_bridge_tutorials/euslisp/rhp4b-interface.l")
+  (setq *robot* (instance rhp4b-robot :init))
+  (send *robot* :init-pose)
+  (sample-eus-choreonoid-converter-common
+   :robot *robot*
+   :test-link (send *robot* :link "R_KNEE_P_LINK")
+   :move-target-link (send (send *robot* :rarm :end-coords) :parent)
+   :wait? wait?
+   )
+  )
+(warn "(sample-eus-choreonoid-converter-rhp4b)~%")
 
 (defun sample-eus-choreonoid-converter-sample-robot
     (&key (wait? nil))

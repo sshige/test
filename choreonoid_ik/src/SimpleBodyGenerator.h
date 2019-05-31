@@ -111,7 +111,7 @@ namespace cnoid {
     Body* body;
 
   private:
-    map<string, LinkInfo> nameLinkInfoMap;
+    map<string, LinkInfo> nameLinkInfoMap; // When key indicated, linkinfo is called very quickly
   };
 }
 

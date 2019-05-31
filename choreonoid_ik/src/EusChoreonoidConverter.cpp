@@ -13,7 +13,7 @@ extern "C" {
   long callInitializeBodyGeneration(char *bodyName)
   {
     SimpleBodyGenerator *pconv = new SimpleBodyGenerator;
-    pconv->initializeBodyGeneration(string(bodyName));
+    pconv->initializeBodyGeneration(string(bodyName)); // clear map container, initialize bodyname and modelname
     return (long)pconv;
   }
 

@@ -1,4 +1,4 @@
-(unless (find-package "CNOID") (make-package "CNOID" :nicknames '("CNOID")))
+(unless (find-package "CNOID") (make-package "CNOID" :nicknames '("CNOID"))) ;; symbol ?
 (in-package "CNOID")
 
 (defvar *eus-choreonoid-converter-lib*
@@ -149,11 +149,11 @@
 Generate choreonoid model from euslisp cascaded-link instance.
 Pointer of choreonoid body is stored, and passed when calling other functions.
   "
-  (send robot :put :cnoid-model (cnoid::initialize-body-generation (string (send robot :name))))
+  (send robot :put :cnoid-model (cnoid::initialize-body-generation (string (send robot :name)))) ;; initialize body instance, set bodyname and modelname
   (let (jnt)
     (dolist (link (send robot :links))
       (setq jnt (send link :joint))
-      (cnoid::add-link-from-link-info
+      (cnoid::add-link-from-link-info ;; connect linkinfo
        (send robot :get :cnoid-model)
        (string (send link :name)) ;; name
        (if (send link :parent-link) (string (send (send link :parent-link) :name)) "") ;; parentName
@@ -230,7 +230,7 @@ Get link coordinates of choreonoid model. Euslisp model does not change.
     (av)
     &key
     (av-buffer) ;; only for getting angle-vector
-    )
+   )
    "
 Set/get angle-vector of choreonoid model. Euslisp model does not change.
    "
